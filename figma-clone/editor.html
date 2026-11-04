@@ -71,22 +71,16 @@
   }
   .viewport {
     position: relative; background: var(--bg);
-    /* Grade sutil tipo Figma */
     background-image:
       linear-gradient(var(--border) 1px, transparent 1px),
       linear-gradient(90deg, var(--border) 1px, transparent 1px);
     background-size: 40px 40px;
-    background-color: var(--bg);
-    min-width: 5000px;
-    min-height: 5000px;
-    padding: 0;
+    min-width: 8000px;
+    min-height: 8000px;
+    padding: 100px;
     display: flex; align-items: flex-start; justify-content: flex-start;
   }
-  .page {
-    position: relative; overflow: visible;
-    width: 1440px; height: 900px;
-    margin: 60px;
-  }
+  /* Sem page fixo - canvas é livre */
 
   /* ---------- Elementos vetoriais ---------- */
   .frame {
@@ -173,9 +167,7 @@
 
   <div class="canvas-area" id="canvasArea">
     <div class="viewport" id="viewport">
-      <div class="page" id="page">
-        <div id="marquee" class="marquee"></div>
-      </div>
+      <div id="marquee" class="marquee"></div>
     </div>
   </div>
 
@@ -214,8 +206,6 @@ class App {
       layers: [],
       selectedIds: [],
       zoom: 1,
-      offsetX: 0,
-      offsetY: 0,
       isDragging: false,
       isDrawing: false,
       isMarquee: false,
@@ -230,7 +220,6 @@ class App {
     };
     this.canvasArea = document.getElementById('canvasArea');
     this.viewport = document.getElementById('viewport');
-    this.page = document.getElementById('page');
     this.bindUI();
     this.bindCanvas();
     this.saveHistory();
@@ -395,25 +384,38 @@ class App {
     this.renderPage(); this.renderLayers(); this.renderProps();
   }
   renderPage() {
-    this.page.innerHTML = '';
     const z = this.state.zoom;
-    this.page.style.transform = `scale(${z})`;
-    this.page.style.transformOrigin = 'top left';
-    this.page.style.width = '1440px';
-    this.page.style.height = '900px';
+    const viewport = this.viewport;
+    const rect = viewport.getBoundingClientRect();
+    const vw = rect.width; const vh = rect.height;
+
+    // Centralizar o conteúdo visível no centro do viewport
+    const centerX = viewport.scrollLeft + vw / 2;
+    const centerY = viewport.scrollTop + vh / 2;
+
+    this.viewport.innerHTML = '<div id="marquee" class="marquee"></div>';
+
+    const marquee = document.getElementById('marquee');
+
     this.state.layers.forEach(layer => {
       if (!layer.visible) return;
       const el = document.createElement('div');
       el.className = 'frame' + (this.isSelected(layer.id) ? ' selected' : '');
-      el.style.left = layer.x + 'px'; el.style.top = layer.y + 'px';
-      el.style.width = Math.max(layer.w, 1) + 'px'; el.style.height = Math.max(layer.h, 1) + 'px';
+      el.style.left = layer.x + 'px';
+      el.style.top = layer.y + 'px';
+      el.style.width = Math.max(layer.w, 1) + 'px';
+      el.style.height = Math.max(layer.h, 1) + 'px';
       el.style.background = layer.fill;
       el.style.border = layer.stroke ? `1px solid ${layer.stroke}` : 'none';
-      el.style.borderRadius = layer.radius + 'px'; el.style.opacity = layer.opacity;
-      el.style.zIndex = '5'; el.style.boxSizing = 'border-box'; el.dataset.id = layer.id;
+      el.style.borderRadius = layer.radius + 'px';
+      el.style.opacity = layer.opacity;
+      el.style.zIndex = '5';
+      el.style.boxSizing = 'border-box';
+      el.dataset.id = layer.id;
       el.onmousedown = (ev) => this.onLayerMouseDown(ev, layer);
       el.ondblclick = (ev) => { ev.stopPropagation(); this.editText(layer); };
-      this.page.appendChild(el);
+      this.viewport.appendChild(el);
+
       if (layer.type === 'path' && layer.nodes && layer.nodes.length > 0) {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.style.width = '100%'; svg.style.height = '100%';
@@ -432,6 +434,9 @@ class App {
         txt.textContent = layer.text; el.appendChild(txt);
       }
     });
+
+    // Reinserir marquee no final para ficar por cima
+    if (marquee.parentNode) this.viewport.appendChild(marquee);
   }
   renderLayers() {
     const list = document.getElementById('layersList');
@@ -475,32 +480,15 @@ class App {
   fitViewport() {
     const rect = this.canvasArea.getBoundingClientRect();
     const vw = rect.width - 40, vh = rect.height - 40;
-    const scale = Math.min(vw / 1560, vh / 1020);
+    const scale = Math.min(vw / 800, vh / 600);
     this.state.zoom = scale;
-    this.state.offsetX = 0; this.state.offsetY = 0;
+    this.viewport.scrollLeft = 0; this.viewport.scrollTop = 0;
     this.render();
     document.getElementById('zoomBadge').textContent = Math.round(this.state.zoom * 100) + '%';
   }
   bindCanvas() {
-    const page = this.page, viewport = this.viewport;
+    const viewport = this.viewport;
 
-    // Clique no viewport (canvas infinito)
-    viewport.onmousedown = (e) => {
-      if (this.state.tool === 'hand') return;
-      if (e.target !== viewport && e.target !== page && !e.target.classList.contains('frame')) return;
-      e.stopPropagation(); e.preventDefault();
-      const rect = viewport.getBoundingClientRect();
-      const x = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom;
-      const y = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom;
-      if (this.state.tool === 'select') { this.deselectAll(); if (e.shiftKey) this.startMarquee(x, y); }
-      else if (['rect','circle','text'].includes(this.state.tool)) { this.startCreation(this.state.tool, x, y); }
-      else if (this.state.tool === 'pen') { this.startPath(x, y); }
-    };
-
-    // Mão: pan com arrasto
-    viewport.onmousedown = viewport.onmousedown; // já definido acima
-    // Override para hand tool
-    const origVDown = viewport.onmousedown;
     viewport.onmousedown = (e) => {
       if (this.state.tool === 'hand') {
         e.stopPropagation(); e.preventDefault();
@@ -509,22 +497,26 @@ class App {
         this.canvasArea.style.cursor = 'grabbing';
         return;
       }
-      origVDown(e);
+      if (e.target !== viewport && !e.target.classList.contains('frame')) return;
+      e.stopPropagation(); e.preventDefault();
+      const x = (e.clientX - viewport.getBoundingClientRect().left + viewport.scrollLeft) / this.state.zoom;
+      const y = (e.clientY - viewport.getBoundingClientRect().top + viewport.scrollTop) / this.state.zoom;
+      if (this.state.tool === 'select') { this.deselectAll(); if (e.shiftKey) this.startMarquee(x, y); }
+      else if (['rect','circle','text'].includes(this.state.tool)) { this.startCreation(this.state.tool, x, y); }
+      else if (this.state.tool === 'pen') { this.startPath(x, y); }
     };
 
     window.onmousemove = (e) => {
       if (this.state.isPanning) {
         const dx = e.clientX - this.state.dragStart.x;
         const dy = e.clientY - this.state.dragStart.y;
-        this.state.offsetX += dx;
-        this.state.offsetY += dy;
         this.state.dragStart = { x: e.clientX, y: e.clientY };
         viewport.scrollLeft -= dx;
         viewport.scrollTop -= dy;
         return;
       }
       if (this.state.isMarquee) {
-        const rect = page.getBoundingClientRect();
+        const rect = viewport.getBoundingClientRect();
         const x = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom;
         const y = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom;
         const m = document.getElementById('marquee');
@@ -536,14 +528,14 @@ class App {
         return;
       }
       if (this.state.isDrawing && this.state.creationEl && this.state.creationEl.type !== 'path') {
-        const rect = page.getBoundingClientRect();
+        const rect = viewport.getBoundingClientRect();
         const x = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom;
         const y = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom;
         this.updateCreation(x, y);
         return;
       }
       if (this.state.isDragging) {
-        const rect = page.getBoundingClientRect();
+        const rect = viewport.getBoundingClientRect();
         const x = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom;
         const y = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom;
         const dx = x - this.state.dragStart.x;
@@ -564,11 +556,12 @@ class App {
       const nz = Math.min(Math.max(0.25, this.state.zoom + delta), 4);
       if (nz !== this.state.zoom) {
         const rect = viewport.getBoundingClientRect();
-        const mx = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom - this.state.offsetX;
-        const my = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom - this.state.offsetY;
+        const mx = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom;
+        const my = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom;
         this.state.zoom = nz;
-        this.state.offsetX = (e.clientX - rect.left + viewport.scrollLeft) / this.state.zoom - mx;
-        this.state.offsetY = (e.clientY - rect.top + viewport.scrollTop) / this.state.zoom - my;
+        // Manter o ponto sob o cursor fixo ao fazer zoom
+        viewport.scrollLeft = (e.clientX - rect.left + viewport.scrollLeft) - mx * this.state.zoom;
+        viewport.scrollTop = (e.clientY - rect.top + viewport.scrollTop) - my * this.state.zoom;
         this.render();
         document.getElementById('zoomBadge').textContent = Math.round(this.state.zoom * 100) + '%';
       }
@@ -591,10 +584,10 @@ class App {
       if (multi && this.isSelected(layer.id)) this.selectLayer(layer.id, true);
       else { this.deselectAll(); this.selectLayer(layer.id); }
       this.state.isDragging = true;
-      const rect = this.page.getBoundingClientRect();
+      const rect = this.viewport.getBoundingClientRect();
       this.state.dragStart = { x: (e.clientX - rect.left + this.viewport.scrollLeft) / this.state.zoom, y: (e.clientY - rect.top + this.viewport.scrollTop) / this.state.zoom };
     } else if (this.state.tool === 'pen') {
-      const rect = this.page.getBoundingClientRect();
+      const rect = this.viewport.getBoundingClientRect();
       const x = (e.clientX - rect.left + this.viewport.scrollLeft) / this.state.zoom;
       const y = (e.clientY - rect.top + this.viewport.scrollTop) / this.state.zoom;
       if (this.state.currentPath) this.addPathNode(x, y);
@@ -619,10 +612,9 @@ class App {
     URL.revokeObjectURL(url);
   }
   exportPNG() {
-    const page = this.page, z = this.state.zoom;
     const c = document.createElement('canvas');
-    c.width = page.offsetWidth * z; c.height = page.offsetHeight * z;
-    const ctx = c.getContext('2d'); ctx.scale(z, z);
+    c.width = 1440; c.height = 900;
+    const ctx = c.getContext('2d');
     this.state.layers.forEach(l => {
       if (!l.visible) return;
       ctx.globalAlpha = l.opacity; ctx.save(); ctx.translate(l.x, l.y);
