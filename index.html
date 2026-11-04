@@ -89,32 +89,32 @@
     padding: 4px 10px; font-size: 13px; color: var(--muted); min-width: 44px; text-align: center;
   }
 
-  /* ---------- Canvas ---------- */
+  /* ---------- Canvas infinito ---------- */
   .canvas-area {
     flex: 1;
     position: relative;
     background: var(--bg);
     overflow: auto;
-    display: flex;
-    align-items: center;
-    justify-content: center;
   }
   .viewport {
     position: relative;
-    background: radial-gradient(circle at 50% 50%, #141c2a 0%, #0b0f19 70%);
-    box-shadow: 0 0 80px rgba(0,0,0,0.9);
+    background:
+      radial-gradient(circle at 50% 50%, #141c2a 0%, #0b0f19 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.02) 20px),
+      repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.02) 20px);
+    background-size: 40px 40px, 20px 20px, 20px 20px;
+    min-width: 3000px;
+    min-height: 2000px;
+    padding: 60px;
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    padding: 48px;
-    overflow: visible;
   }
   .page {
     background: rgba(255,255,255,0.02);
     border: 1px solid rgba(255,255,255,0.06);
     position: relative;
     backdrop-filter: blur(2px);
-    overflow: visible;
   }
   .shader-canvas {
     position: absolute; top: 0; left: 0; width: 100%; height: 100%;
@@ -131,13 +131,11 @@
     cursor: move;
     background: transparent;
     z-index: 5;
+    box-sizing: border-box;
   }
   .frame.selected {
     border: 2px solid var(--accent);
     box-shadow: 0 0 0 3px rgba(79,195,247,0.15), 0 8px 24px rgba(0,0,0,0.5);
-  }
-  .frame.drag-preview {
-    opacity: 0.6;
   }
   .path-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
 
@@ -215,7 +213,8 @@
   .btn-add-shader:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,195,247,0.05); }
 
   .empty-canvas {
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
+    display: none;
+    flex-direction: column; align-items: center; justify-content: center;
     height: 100%; color: var(--muted); text-align: center; padding: 40px;
   }
   .empty-canvas svg { width: 64px; height: 64px; margin-bottom: 14px; fill: none; stroke: var(--border); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
@@ -251,13 +250,9 @@
 
   select.prop-input { appearance: none; padding-right: 24px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a97ae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 8px center; }
 
-  /* Canvas event capture layer - transparente, captura todos os cliques */
-  #capture-layer {
-    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
-    cursor: default; z-index: 2;
-  }
-  #capture-layer.drawing { cursor: crosshair; }
-  #capture-layer.selecting { cursor: default; }
+  /* ---------- Modo caneta: cursor ---------- */
+  #canvasArea.pen-mode { cursor: crosshair; }
+  #canvasArea.select-mode { cursor: default; }
 </style>
 </head>
 <body>
@@ -314,19 +309,13 @@
   </div>
 
   <!-- Canvas -->
-  <div class="canvas-area" id="canvasArea">
+  <div class="canvas-area" id="canvasArea" style="cursor: default;">
     <div class="viewport" id="viewport">
       <div class="page" id="page">
-        <!-- Camada de captura de eventos - fica ACIMA de tudo para capturar cliques -->
-        <div id="capture-layer"></div>
         <div id="marquee" class="marquee" style="display:none;"></div>
         <canvas id="shaderCanvas" class="shader-canvas"></canvas>
         <!-- Frames e paths injetados via JS -->
       </div>
-    </div>
-    <div class="empty-canvas" id="emptyState">
-      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
-      <div class="hint">Use <b>Caneta (P)</b> para criar vetores ou <b>Retângulo (R)</b> / <b>Círculo (O)</b><br>Clique no canvas para começar a desenhar</div>
     </div>
   </div>
 
@@ -400,6 +389,7 @@ class VectorShaderApp {
       isDragging: false,
       isDrawing: false,
       isMarquee: false,
+      isPanning: false,
       dragStart: {x:0, y:0},
       currentPath: null,
       currentNode: null,
@@ -410,14 +400,15 @@ class VectorShaderApp {
       sidebar: 'layers',
       activeShaderLayer: null,
       activeShaderIndex: null,
-      shaderTime: 0
+      shaderTime: 0,
+      creationStart: null,
+      creationEl: null
     };
 
     this.canvasArea = document.getElementById('canvasArea');
     this.viewport = document.getElementById('viewport');
     this.page = document.getElementById('page');
     this.shaderCanvas = document.getElementById('shaderCanvas');
-    this.captureLayer = document.getElementById('capture-layer');
     this.emptyState = document.getElementById('emptyState');
     this.layersList = document.getElementById('layersList');
     this.shaderStack = document.getElementById('shaderStack');
@@ -462,7 +453,16 @@ class VectorShaderApp {
       if (e.key === 'Delete' || e.key === 'Backspace') this.deleteSelected();
       if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); }
       if (e.ctrlKey && e.key === 'y') { e.preventDefault(); this.redo(); }
-      if (e.key === 'Escape') { this.deselectAll(); this.state.currentNode = null; this.state.handleDrag = null; if (this.state.currentPath) { this.state.currentPath = null; this.render(); } }
+      if (e.key === 'Escape') {
+        this.deselectAll();
+        this.state.currentNode = null;
+        this.state.handleDrag = null;
+        this.state.isDrawing = false;
+        this.state.currentPath = null;
+        this.state.creationStart = null;
+        if (this.state.creationEl) { this.state.creationEl.remove(); this.state.creationEl = null; }
+        this.render();
+      }
     });
 
     const props = ['propFill','propStroke','propStrokeWidth','propOpacity','propRadius','propBlendMode'];
@@ -490,18 +490,14 @@ class VectorShaderApp {
     this.state.currentNode = null;
     this.state.handleDrag = null;
     this.state.currentPath = null;
+    this.state.isDrawing = false;
+    this.state.creationStart = null;
+    if (this.state.creationEl) { this.state.creationEl.remove(); this.state.creationEl = null; }
+
     document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
     document.getElementById('tool-' + tool).classList.add('active');
-    this.updateCursor();
-  }
 
-  updateCursor() {
-    const capture = document.getElementById('capture-layer');
-    capture.className = '';
-    if (this.state.tool === 'pen') capture.classList.add('drawing');
-    else if (this.state.tool === 'select') capture.classList.add('selecting');
-    const map = { select: 'default', pen: 'crosshair', node: 'crosshair', rect: 'crosshair', circle: 'crosshair', text: 'crosshair', zoom: 'zoom-in', hand: 'grab' };
-    this.canvasArea.style.cursor = map[this.state.tool] || 'default';
+    this.canvasArea.className = 'canvas-area' + (tool === 'pen' ? ' pen-mode' : (tool === 'select' ? ' select-mode' : ''));
   }
 
   /* ---------- History ---------- */
@@ -584,7 +580,7 @@ class VectorShaderApp {
   }
 
   addFrame() {
-    const f = this.newLayer('frame', 100, 100, 400, 600, { fill: '#0b0f19', stroke: '#223044', radius: 16 });
+    const f = this.newLayer('frame', 200, 200, 400, 600, { fill: '#0b0f19', stroke: '#223044', radius: 16 });
     this.state.layers.push(f);
     this.saveHistory();
     this.deselectAll();
@@ -593,6 +589,7 @@ class VectorShaderApp {
     this.showToast('Frame criado');
   }
 
+  /* ---------- Vector path ---------- */
   addPathNode(x, y, type = 'line', handleIn = null, handleOut = null) {
     return { x, y, type, handleIn, handleOut };
   }
@@ -635,13 +632,6 @@ class VectorShaderApp {
     this.render();
   }
 
-  finishPath() {
-    if (this.state.currentPath) {
-      this.state.currentPath = null;
-      this.showToast('Path finalizado. Pressione P para novo path.');
-    }
-  }
-
   updatePathBounds(path) {
     if (!path.nodes || path.nodes.length === 0) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
@@ -674,30 +664,64 @@ class VectorShaderApp {
     return d;
   }
 
-  addRect(x, y) {
-    const r = this.newLayer('rect', x, y, 160, 160, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 8 });
-    this.state.layers.push(r);
-    this.saveHistory();
-    this.deselectAll();
-    this.selectLayer(r.id);
+  /* ---------- Criar elementos com arrasto (como Figma) ---------- */
+  startCreation(type, x, y) {
+    this.state.creationStart = {x, y};
+    this.state.isDrawing = true;
+
+    if (type === 'rect') {
+      const el = this.newLayer('rect', x, y, 0, 0, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 8 });
+      this.state.layers.push(el);
+      this.state.selectedIds = [el.id];
+      this.state.creationEl = el;
+      this.render();
+    } else if (type === 'circle') {
+      const el = this.newLayer('circle', x, y, 0, 0, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 999 });
+      this.state.layers.push(el);
+      this.state.selectedIds = [el.id];
+      this.state.creationEl = el;
+      this.render();
+    } else if (type === 'text') {
+      const el = this.newLayer('text', x, y, 0, 0, { fill: 'transparent', stroke: '#4fc3f7', text: 'Texto', radius: 0 });
+      this.state.layers.push(el);
+      this.state.selectedIds = [el.id];
+      this.state.creationEl = el;
+      this.render();
+    } else if (type === 'path') {
+      this.startPath(x, y);
+    }
+  }
+
+  updateCreation(x, y) {
+    if (!this.state.creationStart || !this.state.creationEl) return;
+    const start = this.state.creationStart;
+    const el = this.state.creationEl;
+    const dx = x - start.x;
+    const dy = y - start.y;
+    const w = Math.abs(dx);
+    const h = Math.abs(dy);
+    el.x = dx < 0 ? start.x - w : start.x;
+    el.y = dy < 0 ? start.y - h : start.y;
+    el.w = w;
+    el.h = h;
+    if (el.type === 'text' && w > 40 && h > 20) {
+      // texto não redimensiona por arrasto, apenas cria
+    }
     this.render();
   }
 
-  addCircle(x, y) {
-    const c = this.newLayer('circle', x, y, 140, 140, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 999 });
-    this.state.layers.push(c);
+  finishCreation() {
+    if (this.state.creationEl) {
+      const el = this.state.creationEl;
+      if (el.w < 5 && el.h < 5) {
+        // remover se muito pequeno
+        this.state.layers = this.state.layers.filter(l => l.id !== el.id);
+      }
+      this.state.creationEl = null;
+    }
+    this.state.creationStart = null;
+    this.state.isDrawing = false;
     this.saveHistory();
-    this.deselectAll();
-    this.selectLayer(c.id);
-    this.render();
-  }
-
-  addText(x, y) {
-    const t = this.newLayer('text', x, y, 160, 48, { fill: 'transparent', stroke: '#4fc3f7', text: 'Texto', radius: 0 });
-    this.state.layers.push(t);
-    this.saveHistory();
-    this.deselectAll();
-    this.selectLayer(t.id);
     this.render();
   }
 
@@ -791,17 +815,11 @@ class VectorShaderApp {
   renderPage() {
     this.page.innerHTML = '';
 
-    // Recria a camada de captura
-    const capture = document.createElement('div');
-    capture.id = 'capture-layer';
-    capture.className = this.state.tool === 'pen' ? 'drawing' : (this.state.tool === 'select' ? 'selecting' : '');
-    this.page.appendChild(capture);
-
     const z = this.state.zoom;
     this.page.style.transform = `scale(${z})`;
     this.page.style.transformOrigin = 'top left';
-    this.page.style.width = '1600px';
-    this.page.style.height = '1000px';
+    this.page.style.width = '3000px';
+    this.page.style.height = '2000px';
 
     this.state.layers.forEach(layer => {
       if (!layer.visible) return;
@@ -809,8 +827,8 @@ class VectorShaderApp {
       el.className = 'frame' + (this.isSelected(layer.id) ? ' selected' : '');
       el.style.left = layer.x + 'px';
       el.style.top = layer.y + 'px';
-      el.style.width = layer.w + 'px';
-      el.style.height = layer.h + 'px';
+      el.style.width = Math.max(layer.w, 1) + 'px';
+      el.style.height = Math.max(layer.h, 1) + 'px';
       el.style.background = layer.fill;
       el.style.border = layer.stroke ? `1px solid ${layer.stroke}` : 'none';
       el.style.borderRadius = layer.radius + 'px';
@@ -818,12 +836,16 @@ class VectorShaderApp {
       el.style.display = layer.locked ? 'none' : 'block';
       el.style.mixBlendMode = layer.blendMode;
       el.style.zIndex = '5';
+      el.style.boxSizing = 'border-box';
       el.dataset.id = layer.id;
+
+      // Eventos de seleção/arrasto no frame
       el.onmousedown = (e) => this.onLayerMouseDown(e, layer);
       el.ondblclick = (e) => { e.stopPropagation(); this.editText(layer); };
+
       this.page.appendChild(el);
 
-      // Path SVG overlay para camadas vetoriais
+      // Path SVG overlay
       if (layer.type === 'path' && layer.nodes && layer.nodes.length > 0) {
         const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
         svg.className = 'path-svg';
@@ -840,7 +862,7 @@ class VectorShaderApp {
         el.appendChild(svg);
       }
 
-      // Texto dentro de rect/frame
+      // Texto
       if ((layer.type === 'rect' || layer.type === 'frame' || layer.type === 'text') && layer.text) {
         const txt = document.createElement('div');
         txt.style.position = 'absolute';
@@ -855,7 +877,7 @@ class VectorShaderApp {
         el.appendChild(txt);
       }
 
-      // Nodes overlay
+      // Nodes overlay (modo nó ou path selecionado)
       if ((this.state.tool === 'node' || layer.type === 'path') && this.isSelected(layer.id) && layer.nodes) {
         layer.nodes.forEach((n, i) => {
           const nodeEl = document.createElement('div');
@@ -877,14 +899,9 @@ class VectorShaderApp {
       }
     });
 
-    // Reinsere shader canvas e marquee após os frames para manter ordem z
-    const shaderCanvas = document.getElementById('shaderCanvas');
-    if (shaderCanvas && shaderCanvas.parentNode === this.page) {
-      this.page.appendChild(shaderCanvas);
-    }
-    const marquee = document.getElementById('marquee');
-    if (marquee && marquee.parentNode === this.page) {
-      this.page.appendChild(marquee);
+    // Reinsere shader canvas após os frames
+    if (this.shaderCanvas && this.shaderCanvas.parentNode === this.page) {
+      this.page.appendChild(this.shaderCanvas);
     }
   }
 
@@ -978,52 +995,44 @@ class VectorShaderApp {
   }
 
   updateEmptyState() {
-    this.emptyState.style.display = this.state.layers.length === 0 ? 'flex' : 'none';
+    // canvas infinito não precisa de empty state
   }
 
-  /* ---------- Canvas events ---------- */
+  /* ---------- Canvas events (como Figma) ---------- */
   bindCanvas() {
-    const capture = document.getElementById('capture-layer');
     const page = this.page;
     const viewport = this.viewport;
+    const canvasArea = this.canvasArea;
 
-    // === CAPTURE LAYER EVENTS (cliques no espaço do canvas) ===
-    capture.onmousedown = (e) => {
+    // === PAGE MOUSEDOWN: início de criação ou seleção ===
+    page.onmousedown = (e) => {
+      // Ignorar clique dentro de frames (eles tratam via onmousedown próprio)
+      if (e.target !== page && e.target !== viewport && e.target.tagName !== 'DIV') return;
+      if (e.target.classList && e.target.classList.contains('frame')) return;
+      if (e.target.id === 'marquee') return;
+      if (e.target.id === 'shaderCanvas') return;
+
       e.stopPropagation();
       e.preventDefault();
 
+      const rect = page.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / this.state.zoom;
+      const y = (e.clientY - rect.top) / this.state.zoom;
+
       if (this.state.tool === 'select') {
         this.deselectAll();
-        if (e.shiftKey) this.startMarquee(e);
+        if (e.shiftKey) {
+          this.startMarquee(x, y);
+        }
+      } else if (['rect','circle','text'].includes(this.state.tool)) {
+        this.startCreation(this.state.tool, x, y);
       } else if (this.state.tool === 'pen') {
-        const pos = this.getCanvasPos(e);
-        this.startPath(pos.x, pos.y);
-        this.state.isDrawing = true;
-      } else if (this.state.tool === 'rect') {
-        const pos = this.getCanvasPos(e);
-        this.addRect(pos.x, pos.y);
-      } else if (this.state.tool === 'circle') {
-        const pos = this.getCanvasPos(e);
-        this.addCircle(pos.x, pos.y);
-      } else if (this.state.tool === 'text') {
-        const pos = this.getCanvasPos(e);
-        this.addText(pos.x, pos.y);
+        this.startPath(x, y);
       }
     };
 
-    // === FRAME / ELEMENT EVENTS ===
-    // Usamos delegação no page para cliques em frames
-    page.onmousedown = (e) => {
-      // Se o clique veio de dentro de um frame, o frame já tratou via onmousedown próprio
-      // Se veio diretamente do page (não de um frame filho), tratamos aqui
-      if (e.target === page || e.target === viewport || e.target.id === 'capture-layer') {
-        // já tratado pelo capture layer
-        return;
-      }
-    };
-
-    // === GLOBAL MOUSEMOVE (captura arrastos mesmo saindo do page) ===
-    window.onmousemove = (e) => {
+    // === PAGE MOUSEMOVE: arrasto de criação, seleção, pan ===
+    page.onmousemove = (e) => {
       if (this.state.isMarquee) {
         const rect = page.getBoundingClientRect();
         const x = (e.clientX - rect.left) / this.state.zoom;
@@ -1034,6 +1043,13 @@ class VectorShaderApp {
         m.style.top = Math.min(this.state.marqueeStart.y, y) + 'px';
         m.style.width = Math.abs(x - this.state.marqueeStart.x) + 'px';
         m.style.height = Math.abs(y - this.state.marqueeStart.y) + 'px';
+        return;
+      }
+      if (this.state.isDrawing && this.state.creationEl && !this.state.creationEl.type.includes('path')) {
+        const rect = page.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / this.state.zoom;
+        const y = (e.clientY - rect.top) / this.state.zoom;
+        this.updateCreation(x, y);
         return;
       }
       if (this.state.isDragging) {
@@ -1081,6 +1097,7 @@ class VectorShaderApp {
       }
     };
 
+    // === GLOBAL MOUSEUP ===
     window.onmouseup = (e) => {
       if (this.state.isMarquee) {
         this.finishMarquee();
@@ -1088,17 +1105,22 @@ class VectorShaderApp {
         document.getElementById('marquee').style.display = 'none';
         return;
       }
+      if (this.state.isDrawing) {
+        this.finishCreation();
+        return;
+      }
       this.state.isDragging = false;
       this.state.currentNode = null;
       this.state.handleDrag = null;
     };
 
-    this.viewport.onwheel = (e) => {
+    // === WHEEL ZOOM ===
+    viewport.onwheel = (e) => {
       e.preventDefault();
       const delta = -e.deltaY * 0.001;
       const newZoom = Math.min(Math.max(0.25, this.state.zoom + delta), 4);
       if (newZoom !== this.state.zoom) {
-        const rect = this.viewport.getBoundingClientRect();
+        const rect = viewport.getBoundingClientRect();
         const mx = (e.clientX - rect.left) / this.state.zoom - this.state.offsetX;
         const my = (e.clientY - rect.top) / this.state.zoom - this.state.offsetY;
         this.state.zoom = newZoom;
@@ -1110,9 +1132,8 @@ class VectorShaderApp {
     };
   }
 
-  startMarquee(e) {
-    const rect = this.page.getBoundingClientRect();
-    this.state.marqueeStart = { x: (e.clientX - rect.left) / this.state.zoom, y: (e.clientY - rect.top) / this.state.zoom };
+  startMarquee(x, y) {
+    this.state.marqueeStart = {x, y};
     this.state.isMarquee = true;
   }
 
@@ -1137,11 +1158,25 @@ class VectorShaderApp {
       if (multi && this.isSelected(layer.id)) {
         this.selectLayer(layer.id, true);
       } else {
-        if (!multi) this.deselectAll();
+        this.deselectAll();
         this.selectLayer(layer.id);
       }
       this.state.isDragging = true;
-      this.state.dragStart = this.getCanvasPos(e);
+      const rect = this.page.getBoundingClientRect();
+      this.state.dragStart = {
+        x: (e.clientX - rect.left) / this.state.zoom,
+        y: (e.clientY - rect.top) / this.state.zoom
+      };
+    } else if (this.state.tool === 'pen') {
+      // clique no frame enquanto caneta: adiciona nó no path atual se houver
+      const rect = this.page.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / this.state.zoom;
+      const y = (e.clientY - rect.top) / this.state.zoom;
+      if (this.state.currentPath) {
+        this.addPathNodeClick(x, y);
+      } else {
+        this.startPath(x, y);
+      }
     }
   }
 
@@ -1177,7 +1212,7 @@ class VectorShaderApp {
 
   /* ---------- Export ---------- */
   exportSVG() {
-    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000">`;
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000">`;
     this.state.layers.forEach(layer => {
       if (!layer.visible) return;
       svg += `<g opacity="${layer.opacity}" transform="translate(${layer.x},${layer.y})" style="mix-blend-mode:${layer.blendMode}">`;
