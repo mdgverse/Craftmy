@@ -1,0 +1,579 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>CraftDesign — Editor Vetor</title>
+<style>
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0f19;
+    --panel: #121926;
+    --border: #223044;
+    --text: #e8eaf2;
+    --muted: #8a97ae;
+    --accent: #4fc3f7;
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    overflow: hidden;
+    height: 100vh;
+    color: var(--text);
+    user-select: none;
+  }
+  .app { display: flex; height: 100vh; }
+
+  /* Toolbar */
+  .toolbar {
+    width: 56px; background: var(--panel);
+    border-right: 1px solid var(--border);
+    display: flex; flex-direction: column; align-items: center;
+    padding: 14px 6px; gap: 10px; z-index: 20;
+  }
+  .tool-btn {
+    width: 40px; height: 40px; border: 1px solid var(--border);
+    border-radius: 10px; background: #0c121c; cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+    color: var(--muted); transition: all 0.15s;
+  }
+  .tool-btn svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .tool-btn:hover { background: #161e2d; border-color: #334155; }
+  .tool-btn.active { background: #1e6ba8; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(79,195,247,0.2); }
+  .tool-btn.active svg { stroke: #fff; color: #fff; }
+
+  /* Topbar */
+  .topbar {
+    height: 52px; background: var(--panel); border-bottom: 1px solid var(--border);
+    display: flex; align-items: center; padding: 0 24px; gap: 16px; z-index: 30;
+  }
+  .logo { font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.25px; }
+  .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: #0c121c; cursor: pointer; font-size: 13px; color: var(--text);
+  }
+  .btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .btn.primary { background: #1e6ba8; color: #fff; border-color: var(--accent); }
+  .zoom-badge { background: #0c121c; border: 1px solid var(--border); border-radius: 6px; padding: 4px 10px; font-size: 13px; color: var(--muted); min-width: 44px; text-align: center; }
+
+  /* Canvas infinito */
+  .canvas-area { flex: 1; position: relative; background: var(--bg); overflow: auto; }
+  .viewport {
+    position: relative; background:
+      radial-gradient(circle at 50% 50%, #141c2a 0%, #0b0f19 60%),
+      repeating-linear-gradient(0deg, transparent, transparent 19px, rgba(255,255,255,0.02) 20px),
+      repeating-linear-gradient(90deg, transparent, transparent 19px, rgba(255,255,255,0.02) 20px);
+    background-size: 40px 40px, 20px 20px, 20px 20px;
+    min-width: 3000px; min-height: 2000px; padding: 60px;
+    display: flex; align-items: flex-start; justify-content: flex-start;
+  }
+  .page {
+    background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.06);
+    position: relative; backdrop-filter: blur(2px); overflow: visible;
+  }
+  .frame {
+    position: absolute; border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px; cursor: move; background: transparent; z-index: 5; box-sizing: border-box;
+  }
+  .frame.selected { border: 2px solid var(--accent); box-shadow: 0 0 0 3px rgba(79,195,247,0.15); }
+  .path-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; z-index: 6; }
+
+  /* Sidebar */
+  .right-sidebar { width: 340px; background: var(--panel); border-left: 1px solid var(--border); display: flex; flex-direction: column; z-index: 20; }
+  .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
+  .sidebar-tab { flex: 1; padding: 10px; border-bottom: 2px solid transparent; background: #0c121c; cursor: pointer; font-size: 12px; font-weight: 600; color: var(--muted); text-align: center; }
+  .sidebar-tab.active { background: var(--panel); color: var(--accent); border-bottom-color: var(--accent); }
+  .sidebar-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
+  .panel { background: #0c121c; border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .panel-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .layer-item { display: flex; align-items: center; gap: 10px; padding: 8px; border-radius: 7px; cursor: pointer; border: 1px solid transparent; font-size: 13px; transition: 0.15s; }
+  .layer-item.selected { background: rgba(79,195,247,0.1); border-color: var(--accent); }
+  .layer-visibility { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+  .layer-name { flex: 1; color: var(--text); font-size: 13px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .prop-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
+  .prop-label { width: 80px; color: var(--muted); font-size: 12px; }
+  .prop-input { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: #0b0f19; color: var(--text); font-size: 13px; }
+  .color-input { width: 34px; height: 30px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 0; background: #0b0f19; }
+  .btn-delete { width: 100%; margin-top: 8px; padding: 8px; border: 1px solid rgba(248,113,113,0.35); border-radius: 6px; background: rgba(248,113,113,0.08); color: #f87171; cursor: pointer; }
+  .empty-canvas { display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100%; color: var(--muted); text-align: center; padding: 40px; }
+
+  /* Toast */
+  .toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%); background: #0c121c; color: var(--text); padding: 10px 18px; border-radius: 8px; font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100; border: 1px solid var(--border); }
+  .toast.show { opacity: 0.95; }
+
+  select.prop-input { appearance: none; padding-right: 24px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a97ae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 8px center; }
+
+  #canvasArea.pen-mode { cursor: crosshair; }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <div class="toolbar">
+    <button class="tool-btn active" id="tool-select" title="Selecionar (V)">
+      <svg viewBox="0 0 24 24"><path d="M12 2l3 8l-8 1l-2 -6z"/><circle cx="12" cy="11" r="3"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-pen" title="Caneta (P)">
+      <svg viewBox="0 0 24 24"><path d="M12 2l3 8l-8 1l-2 -6z"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-rect" title="Retângulo (R)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-circle" title="Círculo (O)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-text" title="Texto (T)">
+      <svg viewBox="0 0 24 24"><path d="M10 20V4h4v16"/><path d="M14 8h4"/><path d="M14 4h4"/></svg>
+    </button>
+  </div>
+
+  <div class="topbar">
+    <div class="logo">CraftDesign</div>
+    <div class="sep"></div>
+    <button class="btn" onclick="app.undo()">↶ Desfazer</button>
+    <button class="btn" onclick="app.redo()">↷ Refazer</button>
+    <div class="sep"></div>
+    <button class="btn" onclick="app.exportSVG()">🎨 Exportar SVG</button>
+    <button class="btn primary" onclick="app.exportPNG()">🖼️ Exportar PNG</button>
+    <div class="sep"></div>
+    <span class="zoom-badge" id="zoomBadge">100%</span>
+    <button class="btn" onclick="app.zoomOut()">−</button>
+    <button class="btn" onclick="app.zoomIn()">+</button>
+  </div>
+
+  <div class="canvas-area" id="canvasArea" style="cursor: default;">
+    <div class="viewport" id="viewport">
+      <div class="page" id="page">
+        <div id="marquee" style="position:absolute;border:1px dashed var(--accent);background:rgba(79,195,247,0.08);pointer-events:none;z-index:100;display:none;"></div>
+      </div>
+    </div>
+  </div>
+
+  <div class="right-sidebar">
+    <div class="sidebar-tabs">
+      <div class="sidebar-tab active" onclick="app.setSidebar('layers')">Camadas</div>
+    </div>
+    <div class="sidebar-body" id="sidebarLayers" style="display:flex;">
+      <div class="panel">
+        <div class="panel-title with-btn">
+          <span>Camadas</span>
+          <button class="btn" style="padding:4px 10px;font-size:12px;" onclick="app.addFrame()">+ Frame</button>
+        </div>
+        <div id="layersList"></div>
+      </div>
+      <div class="panel" id="propsPanel" style="display:none;">
+        <div class="panel-title">Propriedades</div>
+        <div class="prop-row"><span class="prop-label">Preenchimento</span><input type="color" class="color-input" id="propFill"></div>
+        <div class="prop-row"><span class="prop-label">Borda</span><input type="color" class="color-input" id="propStroke"></div>
+        <div class="prop-row"><span class="prop-label">Espessura</span><input type="number" class="prop-input" id="propStrokeWidth" min="0" step="0.5"></div>
+        <div class="prop-row"><span class="prop-label">Opacidade</span><input type="range" min="0" max="1" step="0.05" class="ctrl-slider" id="propOpacity"></div>
+        <div class="prop-row"><span class="prop-label">Raio</span><input type="number" class="prop-input" id="propRadius" min="0" step="1"></div>
+        <button class="btn-delete" onclick="app.deleteSelected()">Excluir elemento</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+class App {
+  constructor() {
+    this.state = {
+      tool: 'select',
+      layers: [],
+      selectedIds: [],
+      zoom: 1,
+      offsetX: 0,
+      offsetY: 0,
+      isDragging: false,
+      isDrawing: false,
+      isMarquee: false,
+      dragStart: {x:0,y:0},
+      creationStart: null,
+      creationEl: null,
+      currentPath: null,
+      history: [],
+      historyIndex: -1,
+      nextId: 1
+    };
+    this.canvasArea = document.getElementById('canvasArea');
+    this.viewport = document.getElementById('viewport');
+    this.page = document.getElementById('page');
+    this.bindUI();
+    this.bindCanvas();
+    this.saveHistory();
+    this.render();
+  }
+  bindUI() {
+    document.getElementById('tool-select').onclick = () => this.setTool('select');
+    document.getElementById('tool-pen').onclick = () => this.setTool('pen');
+    document.getElementById('tool-rect').onclick = () => this.setTool('rect');
+    document.getElementById('tool-circle').onclick = () => this.setTool('circle');
+    document.getElementById('tool-text').onclick = () => this.setTool('text');
+    window.addEventListener('keydown', (e) => {
+      if (e.target.tagName === 'INPUT') return;
+      const k = e.key.toLowerCase();
+      if (k === 'v') this.setTool('select');
+      if (k === 'p') this.setTool('pen');
+      if (k === 'r') this.setTool('rect');
+      if (k === 'o') this.setTool('circle');
+      if (k === 't') this.setTool('text');
+      if (e.key === 'Delete' || e.key === 'Backspace') this.deleteSelected();
+      if (e.ctrlKey && e.key === 'z') { e.preventDefault(); this.undo(); }
+      if (e.ctrlKey && e.key === 'y') { e.preventDefault(); this.redo(); }
+      if (e.key === 'Escape') { this.deselectAll(); this.state.currentPath = null; this.state.isDrawing = false; this.state.creationStart = null; if (this.state.creationEl) { this.state.creationEl.remove(); this.state.creationEl = null; } this.render(); }
+    });
+    ['propFill','propStroke','propStrokeWidth','propOpacity','propRadius'].forEach(id => {
+      const el = document.getElementById(id);
+      el.oninput = () => this.updateFromProps(id);
+      el.onchange = () => this.updateFromProps(id);
+    });
+  }
+  setTool(t) {
+    this.state.tool = t;
+    this.deselectAll();
+    this.state.currentPath = null;
+    this.state.isDrawing = false;
+    this.state.creationStart = null;
+    if (this.state.creationEl) { this.state.creationEl.remove(); this.state.creationEl = null; }
+    document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+    document.getElementById('tool-' + t).classList.add('active');
+    this.canvasArea.className = 'canvas-area' + (t === 'pen' ? ' pen-mode' : '');
+  }
+  saveHistory() {
+    this.state.history = this.state.history.slice(0, this.state.historyIndex + 1);
+    this.state.history.push(JSON.parse(JSON.stringify(this.state.layers)));
+    if (this.state.history.length > 50) this.state.history.shift();
+    else this.state.historyIndex++;
+  }
+  undo() {
+    if (this.state.historyIndex <= 0) return;
+    this.state.historyIndex--;
+    this.state.layers = JSON.parse(JSON.stringify(this.state.history[this.state.historyIndex]));
+    this.deselectAll(); this.render();
+  }
+  redo() {
+    if (this.state.historyIndex >= this.state.history.length - 1) return;
+    this.state.historyIndex++;
+    this.state.layers = JSON.parse(JSON.stringify(this.state.history[this.state.historyIndex]));
+    this.deselectAll(); this.render();
+  }
+  getLayer(id) { return this.state.layers.find(l => l.id === id); }
+  selectLayer(id, multi = false) {
+    if (multi) {
+      if (this.state.selectedIds.includes(id)) this.state.selectedIds = this.state.selectedIds.filter(i => i !== id);
+      else this.state.selectedIds.push(id);
+    } else this.state.selectedIds = [id];
+    this.render();
+  }
+  deselectAll() { this.state.selectedIds = []; this.render(); }
+  isSelected(id) { return this.state.selectedIds.includes(id); }
+  getSelected() { return this.state.selectedIds.map(id => this.getLayer(id)).filter(Boolean); }
+  newLayer(type, x, y, w, h, extra = {}) {
+    return { id: this.state.nextId++, type, x, y, w, h, fill: extra.fill ?? '#0b0f19', stroke: extra.stroke ?? '#4fc3f7', strokeWidth: extra.strokeWidth ?? 2, radius: extra.radius ?? (type === 'circle' ? 999 : 8), opacity: extra.opacity ?? 1, text: extra.text ?? '', visible: true, locked: false, nodes: extra.nodes || [] };
+  }
+  addFrame() {
+    const f = this.newLayer('frame', 200, 200, 400, 600, { fill: '#0b0f19', stroke: '#223044', radius: 16 });
+    this.state.layers.push(f); this.saveHistory(); this.deselectAll(); this.selectLayer(f.id); this.render();
+  }
+  addRect(x, y) {
+    const r = this.newLayer('rect', x, y, 160, 160, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 8 });
+    this.state.layers.push(r); this.saveHistory(); this.deselectAll(); this.selectLayer(r.id); this.render();
+  }
+  addCircle(x, y) {
+    const c = this.newLayer('circle', x, y, 140, 140, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 999 });
+    this.state.layers.push(c); this.saveHistory(); this.deselectAll(); this.selectLayer(c.id); this.render();
+  }
+  addText(x, y) {
+    const t = this.newLayer('text', x, y, 160, 48, { fill: 'transparent', stroke: '#4fc3f7', text: 'Texto', radius: 0 });
+    this.state.layers.push(t); this.saveHistory(); this.deselectAll(); this.selectLayer(t.id); this.render();
+  }
+  deleteSelected() {
+    if (!this.state.selectedIds.length) return;
+    this.state.layers = this.state.layers.filter(l => !this.state.selectedIds.includes(l.id));
+    this.saveHistory(); this.deselectAll(); this.render();
+  }
+  startPath(x, y) {
+    const path = { id: this.state.nextId++, type: 'path', x, y, w: 0, h: 0, fill: 'transparent', stroke: '#4fc3f7', strokeWidth: 3, radius: 0, opacity: 1, visible: true, locked: false, nodes: [{x, y, type: 'line'}] };
+    this.state.layers.push(path); this.state.currentPath = path; this.saveHistory(); this.deselectAll(); this.selectLayer(path.id); this.render();
+  }
+  addPathNode(x, y) {
+    if (!this.state.currentPath) return;
+    const p = this.state.currentPath;
+    const last = p.nodes[p.nodes.length - 1];
+    if (p.nodes.length > 1 && last.type === 'line') { last.type = 'curve'; last.handleOut = { x: (last.x + x) / 2, y: (last.y + y) / 2 }; }
+    p.nodes.push({ x, y, type: 'line' });
+    this.updatePathBounds(p); this.saveHistory(); this.render();
+  }
+  updatePathBounds(p) {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    p.nodes.forEach(n => {
+      minX = Math.min(minX, n.x); minY = Math.min(minY, n.y); maxX = Math.max(maxX, n.x); maxY = Math.max(maxY, n.y);
+      if (n.handleOut) { minX = Math.min(minX, n.handleOut.x); minY = Math.min(minY, n.handleOut.y); maxX = Math.max(maxX, n.handleOut.x); maxY = Math.max(maxY, n.handleOut.y); }
+      if (n.handleIn) { minX = Math.min(minX, n.handleIn.x); minY = Math.min(minY, n.handleIn.y); maxX = Math.max(maxX, n.handleIn.x); maxY = Math.max(maxY, n.handleIn.y); }
+    });
+    p.x = minX; p.y = minY; p.w = Math.max(maxX - minX, 1); p.h = Math.max(maxY - minY, 1);
+  }
+  pathToSVG(p) {
+    if (!p.nodes || p.nodes.length === 0) return '';
+    let d = `M ${p.nodes[0].x} ${p.nodes[0].y}`;
+    for (let i = 1; i < p.nodes.length; i++) {
+      const n = p.nodes[i], prev = p.nodes[i - 1];
+      if (n.type === 'line') d += ` L ${n.x} ${n.y}`;
+      else if (n.type === 'curve') {
+        const hOut = prev.handleOut || { x: prev.x, y: prev.y };
+        const hIn = n.handleIn || { x: n.x, y: n.y };
+        d += ` C ${hOut.x} ${hOut.y}, ${hIn.x} ${hIn.y}, ${n.x} ${n.y}`;
+      }
+    }
+    if (p.nodes.length > 1) d += ' Z';
+    return d;
+  }
+  startCreation(type, x, y) {
+    this.state.creationStart = { x, y };
+    this.state.isDrawing = true;
+    let el;
+    if (type === 'rect') el = this.newLayer('rect', x, y, 0, 0, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 8 });
+    else if (type === 'circle') el = this.newLayer('circle', x, y, 0, 0, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 999 });
+    else if (type === 'text') el = this.newLayer('text', x, y, 0, 0, { fill: 'transparent', stroke: '#4fc3f7', text: 'Texto', radius: 0 });
+    this.state.layers.push(el);
+    this.state.selectedIds = [el.id];
+    this.state.creationEl = el;
+    this.render();
+  }
+  updateCreation(x, y) {
+    if (!this.state.creationStart || !this.state.creationEl) return;
+    const s = this.state.creationStart, el = this.state.creationEl;
+    const dx = x - s.x, dy = y - s.y;
+    el.x = dx < 0 ? s.x - Math.abs(dx) : s.x;
+    el.y = dy < 0 ? s.y - Math.abs(dy) : s.y;
+    el.w = Math.abs(dx); el.h = Math.abs(dy);
+    this.render();
+  }
+  finishCreation() {
+    if (this.state.creationEl && this.state.creationEl.w < 5 && this.state.creationEl.h < 5) {
+      this.state.layers = this.state.layers.filter(l => l.id !== this.state.creationEl.id);
+    }
+    this.state.creationEl = null; this.state.creationStart = null; this.state.isDrawing = false;
+    this.saveHistory(); this.render();
+  }
+  render() {
+    this.renderPage(); this.renderLayers(); this.renderProps();
+  }
+  renderPage() {
+    this.page.innerHTML = '';
+    const z = this.state.zoom;
+    this.page.style.transform = `scale(${z})`;
+    this.page.style.transformOrigin = 'top left';
+    this.page.style.width = '3000px';
+    this.page.style.height = '2000px';
+    this.state.layers.forEach(layer => {
+      if (!layer.visible) return;
+      const el = document.createElement('div');
+      el.className = 'frame' + (this.isSelected(layer.id) ? ' selected' : '');
+      el.style.left = layer.x + 'px'; el.style.top = layer.y + 'px';
+      el.style.width = Math.max(layer.w, 1) + 'px'; el.style.height = Math.max(layer.h, 1) + 'px';
+      el.style.background = layer.fill;
+      el.style.border = layer.stroke ? `1px solid ${layer.stroke}` : 'none';
+      el.style.borderRadius = layer.radius + 'px'; el.style.opacity = layer.opacity;
+      el.style.zIndex = '5'; el.style.boxSizing = 'border-box'; el.dataset.id = layer.id;
+      el.onmousedown = (ev) => this.onLayerMouseDown(ev, layer);
+      el.ondblclick = (ev) => { ev.stopPropagation(); this.editText(layer); };
+      this.page.appendChild(el);
+      if (layer.type === 'path' && layer.nodes && layer.nodes.length > 0) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.style.width = '100%'; svg.style.height = '100%';
+        const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        path.setAttribute('d', this.pathToSVG(layer));
+        path.setAttribute('fill', layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none');
+        path.setAttribute('stroke', layer.stroke); path.setAttribute('stroke-width', layer.strokeWidth);
+        path.setAttribute('stroke-linecap', 'round'); path.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(path); el.appendChild(svg);
+      }
+      if ((layer.type === 'rect' || layer.type === 'frame' || layer.type === 'text') && layer.text) {
+        const txt = document.createElement('div');
+        txt.style.position = 'absolute'; txt.style.left = '50%'; txt.style.top = '50%';
+        txt.style.transform = 'translate(-50%, -50%)'; txt.style.fontSize = '14px';
+        txt.style.color = layer.stroke; txt.style.userSelect = 'none'; txt.style.pointerEvents = 'none';
+        txt.textContent = layer.text; el.appendChild(txt);
+      }
+    });
+  }
+  renderLayers() {
+    const list = document.getElementById('layersList');
+    list.innerHTML = '';
+    this.state.layers.forEach(l => {
+      const div = document.createElement('div');
+      div.className = 'layer-item' + (this.isSelected(l.id) ? ' selected' : '');
+      div.onclick = (e) => { e.stopPropagation(); this.selectLayer(l.id, e.ctrlKey || e.metaKey); };
+      const icon = l.type === 'path' ? '✐' : l.type === 'text' ? 'T' : '□';
+      div.innerHTML = `<div style="width:20px;height:20px;border:1px solid var(--border);border-radius:4px;display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0;">${l.visible ? '👁' : '🙈'}</div><div class="layer-thumb">${icon}</div><div class="layer-name">${l.text || (l.type.charAt(0).toUpperCase() + l.type.slice(1))} #${l.id}</div>`;
+      list.appendChild(div);
+    });
+  }
+  renderProps() {
+    const sel = this.getSelected();
+    const p = document.getElementById('propsPanel');
+    p.style.display = sel.length > 0 ? 'block' : 'none';
+    if (!sel.length) return;
+    const el = sel[0];
+    document.getElementById('propFill').value = el.fill;
+    document.getElementById('propStroke').value = el.stroke;
+    document.getElementById('propStrokeWidth').value = el.strokeWidth;
+    document.getElementById('propOpacity').value = el.opacity;
+    document.getElementById('propRadius').value = el.radius;
+  }
+  updateFromProps(id) {
+    const sel = this.getSelected(); if (!sel.length) return;
+    const val = document.getElementById(id).value;
+    sel.forEach(el => {
+      if (id === 'propOpacity') el.opacity = parseFloat(val);
+      else if (['propStrokeWidth','propRadius'].includes(id)) el[id.replace('prop','')] = parseFloat(val);
+      else el[id.replace('prop','')] = val;
+    });
+    this.saveHistory(); this.render();
+  }
+  editText(el) {
+    const t = prompt('Editar texto:', el.text || '');
+    if (t !== null) { el.text = t; this.saveHistory(); this.render(); }
+  }
+  setSidebar() {}
+  bindCanvas() {
+    const page = this.page, viewport = this.viewport;
+    viewport.onmousedown = (e) => {
+      if (e.target !== viewport && e.target !== page && !e.target.classList.contains('frame') && e.target.tagName !== 'DIV') return;
+      e.stopPropagation(); e.preventDefault();
+      const rect = viewport.getBoundingClientRect();
+      const x = (e.clientX - rect.left - 60) / this.state.zoom;
+      const y = (e.clientY - rect.top - 60) / this.state.zoom;
+      if (this.state.tool === 'select') { this.deselectAll(); if (e.shiftKey) this.startMarquee(x, y); }
+      else if (['rect','circle','text'].includes(this.state.tool)) { this.startCreation(this.state.tool, x, y); }
+      else if (this.state.tool === 'pen') { this.startPath(x, y); }
+    };
+    window.onmousemove = (e) => {
+      if (this.state.isMarquee) {
+        const rect = page.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / this.state.zoom;
+        const y = (e.clientY - rect.top) / this.state.zoom;
+        const m = document.getElementById('marquee');
+        m.style.display = 'block';
+        m.style.left = Math.min(this.state.marqueeStart.x, x) + 'px';
+        m.style.top = Math.min(this.state.marqueeStart.y, y) + 'px';
+        m.style.width = Math.abs(x - this.state.marqueeStart.x) + 'px';
+        m.style.height = Math.abs(y - this.state.marqueeStart.y) + 'px';
+        return;
+      }
+      if (this.state.isDrawing && this.state.creationEl && this.state.creationEl.type !== 'path') {
+        const rect = page.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / this.state.zoom;
+        const y = (e.clientY - rect.top) / this.state.zoom;
+        this.updateCreation(x, y);
+        return;
+      }
+      if (this.state.isDragging) {
+        const rect = page.getBoundingClientRect();
+        const x = (e.clientX - rect.left) / this.state.zoom;
+        const y = (e.clientY - rect.top) / this.state.zoom;
+        const dx = x - this.state.dragStart.x;
+        const dy = y - this.state.dragStart.y;
+        this.getSelected().forEach(l => { if (l.locked) return; l.x = Math.round((l.x || 0) + dx); l.y = Math.round((l.y || 0) + dy); });
+        this.state.dragStart = { x, y }; this.render();
+      }
+    };
+    window.onmouseup = () => {
+      if (this.state.isMarquee) { this.finishMarquee(); this.state.isMarquee = false; document.getElementById('marquee').style.display = 'none'; return; }
+      if (this.state.isDrawing) { this.finishCreation(); return; }
+      this.state.isDragging = false;
+    };
+    viewport.onwheel = (e) => {
+      e.preventDefault();
+      const delta = -e.deltaY * 0.001;
+      const nz = Math.min(Math.max(0.25, this.state.zoom + delta), 4);
+      if (nz !== this.state.zoom) {
+        const rect = viewport.getBoundingClientRect();
+        const mx = (e.clientX - rect.left) / this.state.zoom - this.state.offsetX;
+        const my = (e.clientY - rect.top) / this.state.zoom - this.state.offsetY;
+        this.state.zoom = nz;
+        this.state.offsetX = (e.clientX - rect.left) / this.state.zoom - mx;
+        this.state.offsetY = (e.clientY - rect.top) / this.state.zoom - my;
+        this.render();
+        document.getElementById('zoomBadge').textContent = Math.round(this.state.zoom * 100) + '%';
+      }
+    };
+  }
+  startMarquee(x, y) { this.state.marqueeStart = { x, y }; this.state.isMarquee = true; }
+  finishMarquee() {
+    const m = document.getElementById('marquee');
+    if (!m.style.display || m.style.display === 'none') return;
+    const mx1 = parseFloat(m.style.left), my1 = parseFloat(m.style.top);
+    const mx2 = mx1 + parseFloat(m.style.width), my2 = my1 + parseFloat(m.style.height);
+    const ids = [];
+    this.state.layers.forEach(item => { if (item.x >= mx1 && item.y >= my1 && item.x + item.w <= mx2 && item.y + item.h <= my2) ids.push(item.id); });
+    this.state.selectedIds = ids; this.render();
+  }
+  onLayerMouseDown(e, layer) {
+    e.stopPropagation(); e.preventDefault();
+    if (this.state.tool === 'select') {
+      const multi = e.ctrlKey || e.metaKey || e.shiftKey;
+      if (multi && this.isSelected(layer.id)) this.selectLayer(layer.id, true);
+      else { this.deselectAll(); this.selectLayer(layer.id); }
+      this.state.isDragging = true;
+      const rect = this.page.getBoundingClientRect();
+      this.state.dragStart = { x: (e.clientX - rect.left) / this.state.zoom, y: (e.clientY - rect.top) / this.state.zoom };
+    } else if (this.state.tool === 'pen') {
+      const rect = this.page.getBoundingClientRect();
+      const x = (e.clientX - rect.left) / this.state.zoom;
+      const y = (e.clientY - rect.top) / this.state.zoom;
+      if (this.state.currentPath) this.addPathNode(x, y);
+      else this.startPath(x, y);
+    }
+  }
+  zoomIn() { this.state.zoom = Math.min(4, this.state.zoom + 0.25); this.render(); document.getElementById('zoomBadge').textContent = Math.round(this.state.zoom * 100) + '%'; }
+  zoomOut() { this.state.zoom = Math.max(0.25, this.state.zoom - 0.25); this.render(); document.getElementById('zoomBadge').textContent = Math.round(this.state.zoom * 100) + '%'; }
+  exportSVG() {
+    let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="3000" height="2000">`;
+    this.state.layers.forEach(l => {
+      if (!l.visible) return;
+      svg += `<g opacity="${l.opacity}" transform="translate(${l.x},${l.y})">`;
+      if (l.type === 'path' && l.nodes) svg += `<path d="${this.pathToSVG(l)}" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
+      else { svg += `<rect x="0" y="0" width="${l.w}" height="${l.h}" rx="${l.radius}" fill="${l.fill}" stroke="${l.stroke}" stroke-width="${l.strokeWidth}"/>`; if (l.type === 'text' && l.text) svg += `<text x="${l.w/2}" y="${l.h/2}" text-anchor="middle" dominant-baseline="middle" font-size="16" fill="${l.stroke}">${l.text}</text>`; }
+      svg += `</g>`;
+    });
+    svg += `</svg>`;
+    const blob = new Blob([svg], { type: 'image/svg+xml' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a'); a.href = url; a.download = 'craftdesign.svg'; a.click();
+    URL.revokeObjectURL(url);
+  }
+  exportPNG() {
+    const page = this.page, z = this.state.zoom;
+    const c = document.createElement('canvas');
+    c.width = page.offsetWidth * z; c.height = page.offsetHeight * z;
+    const ctx = c.getContext('2d'); ctx.scale(z, z);
+    this.state.layers.forEach(l => {
+      if (!l.visible) return;
+      ctx.globalAlpha = l.opacity; ctx.save(); ctx.translate(l.x, l.y);
+      if (l.type === 'path' && l.nodes) {
+        ctx.beginPath();
+        if (l.nodes.length > 0) { ctx.moveTo(l.nodes[0].x, l.nodes[0].y); for (let i = 1; i < l.nodes.length; i++) { const n = l.nodes[i]; const prev = l.nodes[i - 1]; if (n.type === 'line') ctx.lineTo(n.x, n.y); else if (n.type === 'curve') { const hOut = prev.handleOut || { x: prev.x, y: prev.y }; const hIn = n.handleIn || { x: n.x, y: n.y }; ctx.bezierCurveTo(hOut.x, hOut.y, hIn.x, hIn.y, n.x, n.y); } } if (l.nodes.length > 1) ctx.closePath(); }
+        if (l.fill && l.fill !== 'transparent') { ctx.fillStyle = l.fill; ctx.fill(); }
+        if (l.stroke) { ctx.strokeStyle = l.stroke; ctx.lineWidth = l.strokeWidth; ctx.stroke(); }
+      } else {
+        ctx.fillStyle = l.fill; ctx.strokeStyle = l.stroke; ctx.lineWidth = l.strokeWidth;
+        ctx.beginPath(); ctx.roundRect(0, 0, l.w, l.h, l.radius); ctx.fill(); if (l.stroke) ctx.stroke();
+        if (l.type === 'text' && l.text) { ctx.fillStyle = l.stroke || '#4fc3f7'; ctx.font = '16px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText(l.text, l.w / 2, l.h / 2); }
+      }
+      ctx.restore();
+    });
+    const url = c.toDataURL('image/png');
+    const a = document.createElement('a'); a.href = url; a.download = 'craftdesign.png'; a.click();
+  }
+}
+const app = new App();
+</script>
+
+</body>
+</html>
