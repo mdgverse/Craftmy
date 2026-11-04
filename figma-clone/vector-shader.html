@@ -6,20 +6,29 @@
 <title>CraftDesign — Vetor + Shaders</title>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
+  :root {
+    --bg: #0b0f19;
+    --panel: #121926;
+    --border: #223044;
+    --text: #e8eaf2;
+    --muted: #8a97ae;
+    --accent: #4fc3f7;
+    --accent-dim: #1e6ba8;
+  }
   body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: #0f172a;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', sans-serif;
+    background: var(--bg);
     overflow: hidden;
     height: 100vh;
-    color: #f1f5f9;
+    color: var(--text);
   }
   .app { display: flex; height: 100vh; }
 
   /* ---------- Toolbar esquerda ---------- */
   .toolbar {
     width: 56px;
-    background: #1e293b;
-    border-right: 1px solid #334155;
+    background: var(--panel);
+    border-right: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     align-items: center;
@@ -29,57 +38,61 @@
   }
   .tool-btn {
     width: 40px; height: 40px;
-    border: 1px solid #334155;
+    border: 1px solid var(--border);
     border-radius: 10px;
-    background: #0f172a;
+    background: #0c121c;
     cursor: pointer;
     display: flex; align-items: center; justify-content: center;
-    font-size: 20px;
-    color: #cbd5e1;
+    color: var(--muted);
     transition: all 0.15s;
   }
-  .tool-btn:hover { background: #334155; color: #fff; border-color: #475569; }
+  .tool-btn svg { width: 18px; height: 18px; fill: none; stroke: var(--muted); stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .tool-btn:hover { background: #161e2d; color: #fff; border-color: #334155; }
+  .tool-btn:hover svg { stroke: #fff; }
   .tool-btn.active {
-    background: #3b82f6;
+    background: var(--accent-dim);
     color: #fff;
-    border-color: #3b82f6;
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.2);
+    border-color: var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,195,247,0.18);
   }
+  .tool-btn.active svg { stroke: #fff; }
 
   /* ---------- Topbar ---------- */
   .topbar {
     height: 52px;
-    background: #1e293b;
-    border-bottom: 1px solid #334155;
+    background: var(--panel);
+    border-bottom: 1px solid var(--border);
     display: flex;
     align-items: center;
     padding: 0 24px;
     gap: 16px;
     position: sticky; top: 0; z-index: 30;
   }
-  .logo { font-weight: 800; font-size: 18px; color: #3b82f6; letter-spacing: -0.25px; }
-  .sep { width: 1px; height: 22px; background: #334155; margin: 0 4px; }
+  .logo { font-weight: 800; font-size: 18px; color: var(--accent); letter-spacing: -0.25px; }
+  .logo-sub { font-weight: 400; font-size: 12px; color: var(--muted); margin-left: 8px; }
+  .sep { width: 1px; height: 22px; background: var(--border); margin: 0 4px; }
   .btn {
-    display: flex; align-items: center; gap: 6px;
-    padding: 6px 14px; border: 1px solid #334155; border-radius: 8px;
-    background: #0f172a; cursor: pointer; font-size: 13px; color: #cbd5e1;
+    display: inline-flex; align-items: center; gap: 6px;
+    padding: 6px 14px; border: 1px solid var(--border); border-radius: 8px;
+    background: #0c121c; cursor: pointer; font-size: 13px; color: var(--text);
     transition: all 0.15s;
   }
-  .btn:hover { background: #334155; border-color: #475569; color: #fff; }
-  .btn.primary { background: #3b82f6; color: #fff; border-color: #3b82f6; }
-  .btn.primary:hover { background: #2563eb; }
-  .btn.danger { background: transparent; color: #f87171; border-color: #f87171; }
-  .btn.danger:hover { background: rgba(248,113,113,0.1); }
+  .btn svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 1.6; stroke-linecap: round; stroke-linejoin: round; }
+  .btn:hover { background: #161e2d; border-color: #334155; }
+  .btn.primary { background: var(--accent-dim); color: #fff; border-color: var(--accent); }
+  .btn.primary:hover { background: #157abf; }
+  .btn.danger { background: transparent; color: #f87171; border-color: rgba(248,113,113,0.35); }
+  .btn.danger:hover { background: rgba(248,113,113,0.1); border-color: #f87171; }
   .zoom-badge {
-    background: #0f172a; border: 1px solid #334155; border-radius: 6px;
-    padding: 4px 10px; font-size: 13px; color: #94a3b8; min-width: 44px; text-align: center;
+    background: #0c121c; border: 1px solid var(--border); border-radius: 6px;
+    padding: 4px 10px; font-size: 13px; color: var(--muted); min-width: 44px; text-align: center;
   }
 
   /* ---------- Canvas ---------- */
   .canvas-area {
     flex: 1;
     position: relative;
-    background: #0f172a;
+    background: var(--bg);
     overflow: auto;
     display: flex;
     align-items: center;
@@ -87,131 +100,149 @@
   }
   .viewport {
     position: relative;
-    background: linear-gradient(135deg, #1e293b 25%, #0f172a 25%, #0f172a 75%, #1e293b 75%);
-    background-size: 40px 40px;
-    box-shadow: 0 0 60px rgba(0,0,0,0.8);
+    background: radial-gradient(circle at 50% 50%, #141c2a 0%, #0b0f19 70%);
+    box-shadow: 0 0 80px rgba(0,0,0,0.9);
     display: flex;
     align-items: flex-start;
     justify-content: flex-start;
-    padding: 40px;
+    padding: 48px;
+    overflow: visible;
   }
   .page {
-    background: #ffffff08;
-    border: 1px solid rgba(255,255,255,0.08);
+    background: rgba(255,255,255,0.02);
+    border: 1px solid rgba(255,255,255,0.06);
     position: relative;
-    backdrop-filter: blur(4px);
+    backdrop-filter: blur(2px);
   }
-
-  /* WebGL shader canvas overlay */
+  /* Shader overlay não bloqueia cliques */
   .shader-canvas {
-    position: absolute;
-    top: 0; left: 0;
-    width: 100%; height: 100%;
+    position: absolute; top: 0; left: 0; width: 100%; height: 100%;
     pointer-events: none;
   }
+
+  /* ---------- Elementos vetoriais ---------- */
+  .frame {
+    position: absolute;
+    border: 1px solid rgba(255,255,255,0.08);
+    border-radius: 10px;
+    overflow: hidden;
+    cursor: move;
+    background: transparent;
+  }
+  .frame.selected {
+    border: 2px solid var(--accent);
+    box-shadow: 0 0 0 3px rgba(79,195,247,0.15), 0 8px 24px rgba(0,0,0,0.5);
+  }
+  .path-svg { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
 
   /* ---------- Sidebar direita ---------- */
   .right-sidebar {
     width: 360px;
-    background: #1e293b;
-    border-left: 1px solid #334155;
+    background: var(--panel);
+    border-left: 1px solid var(--border);
     display: flex;
     flex-direction: column;
     z-index: 20;
   }
-  .sidebar-tabs { display: flex; border-bottom: 1px solid #334155; }
+  .sidebar-tabs { display: flex; border-bottom: 1px solid var(--border); }
   .sidebar-tab {
     flex: 1; padding: 10px; border-bottom: 2px solid transparent;
-    background: #0f172a; cursor: pointer; font-size: 12px;
-    font-weight: 600; color: #64748b; text-align: center;
+    background: #0c121c; cursor: pointer; font-size: 12px;
+    font-weight: 600; color: var(--muted); text-align: center;
     transition: all 0.15s;
   }
-  .sidebar-tab:hover { background: #334155; color: #cbd5e1; }
-  .sidebar-tab.active { background: #1e293b; color: #3b82f6; border-bottom-color: #3b82f6; }
+  .sidebar-tab:hover { background: #161e2d; color: #fff; }
+  .sidebar-tab.active { background: var(--panel); color: var(--accent); border-bottom-color: var(--accent); }
   .sidebar-body { flex: 1; overflow-y: auto; padding: 16px; display: flex; flex-direction: column; gap: 14px; }
 
-  .panel { background: #0f172a; border: 1px solid #334155; border-radius: 10px; padding: 14px; }
-  .panel-title { font-size: 11px; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+  .panel { background: #0c121c; border: 1px solid var(--border); border-radius: 10px; padding: 14px; }
+  .panel-title { font-size: 11px; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.08em; margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
 
-  /* Camadas */
   .layer-item {
     display: flex; align-items: center; gap: 10px;
     padding: 8px; border-radius: 7px; cursor: pointer;
     border: 1px solid transparent; font-size: 13px; transition: all 0.15s;
   }
-  .layer-item:hover { background: rgba(255,255,255,0.05); border-color: #334155; }
-  .layer-item.selected { background: rgba(59,130,246,0.15); border-color: #3b82f6; }
-  .layer-visibility { width: 20px; height: 20px; border: 1px solid #334155; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex-shrink: 0; }
-  .layer-lock { width: 20px; height: 20px; border: 1px solid #334155; border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: #64748b; flex-shrink: 0; }
-  .layer-thumb { width: 24px; height: 20px; border: 1px solid #334155; border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; }
-  .layer-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: #cbd5e1; font-size: 13px; }
+  .layer-item:hover { background: rgba(255,255,255,0.03); border-color: var(--border); }
+  .layer-item.selected { background: rgba(79,195,247,0.1); border-color: var(--accent); }
+  .layer-visibility { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; flex-shrink: 0; }
+  .layer-lock { width: 20px; height: 20px; border: 1px solid var(--border); border-radius: 4px; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 11px; color: var(--muted); flex-shrink: 0; }
+  .layer-thumb { width: 24px; height: 20px; border: 1px solid var(--border); border-radius: 4px; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 10px; color: var(--muted); }
+  .layer-name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--text); font-size: 13px; }
 
   /* Shader stack */
   .shader-item {
-    background: #0f172a; border: 1px solid #334155; border-radius: 8px;
+    background: #0c121c; border: 1px solid var(--border); border-radius: 8px;
     padding: 10px; margin-bottom: 8px; display: flex; align-items: center; gap: 10px;
   }
-  .shader-item.active { border-color: #3b82f6; background: rgba(59,130,246,0.05); }
-  .shader-name { font-weight: 600; font-size: 13px; color: #f1f5f9; flex: 1; }
-  .shader-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: #334155; color: #94a3b8; }
-  .shader-remove { font-size: 16px; color: #64748b; cursor: pointer; }
+  .shader-item.active { border-color: var(--accent); background: rgba(79,195,247,0.05); }
+  .shader-name { font-weight: 600; font-size: 13px; color: var(--text); flex: 1; }
+  .shader-type { font-size: 10px; padding: 2px 6px; border-radius: 4px; background: var(--border); color: var(--muted); }
+  .shader-remove { font-size: 18px; color: var(--muted); cursor: pointer; line-height: 1; }
   .shader-remove:hover { color: #f87171; }
 
-  /* Shader controls */
   .shard-controls { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
   .ctrl-row { display: flex; flex-direction: column; gap: 6px; }
-  .ctrl-label { font-size: 11px; color: #64748b; font-weight: 600; }
-  .ctrl-slider { width: 100%; accent-color: #3b82f6; }
-  .ctrl-value { font-size: 11px; color: #94a3b8; font-family: monospace; }
-  .ctrl-color { width: 34px; height: 26px; border: 1px solid #334155; border-radius: 6px; cursor: pointer; background: #0f172a; }
+  .ctrl-label { font-size: 11px; color: var(--muted); font-weight: 600; }
+  .ctrl-slider { width: 100%; accent-color: var(--accent); }
+  .ctrl-value { font-size: 11px; color: var(--muted); font-family: ui-monospace, SFMono-Regular, monospace; }
+  .ctrl-color { width: 34px; height: 26px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 0; background: #0c121c; }
 
   .prop-row { display: flex; align-items: center; gap: 10px; font-size: 13px; }
-  .prop-label { width: 80px; color: #64748b; font-size: 12px; }
-  .prop-input { flex: 1; padding: 6px 8px; border: 1px solid #334155; border-radius: 6px; background: #0f172a; color: #f1f5f9; font-size: 13px; }
-  .prop-input:focus { outline: none; border-color: #3b82f6; }
-  .color-input { width: 34px; height: 30px; border: 1px solid #334155; border-radius: 6px; cursor: pointer; padding: 0; background: #0f172a; }
+  .prop-label { width: 80px; color: var(--muted); font-size: 12px; }
+  .prop-input { flex: 1; padding: 6px 8px; border: 1px solid var(--border); border-radius: 6px; background: #0b0f19; color: var(--text); font-size: 13px; }
+  .prop-input:focus { outline: none; border-color: var(--accent); }
+  .color-input { width: 34px; height: 30px; border: 1px solid var(--border); border-radius: 6px; cursor: pointer; padding: 0; background: #0b0f19; }
+  .prop-checkbox { display: flex; align-items: center; gap: 8px; cursor: pointer; }
+  .prop-checkbox input { width: 16px; height: 16px; accent-color: var(--accent); }
+  .btn-delete {
+    width: 100%; margin-top: 8px; padding: 8px; border: 1px solid rgba(248,113,113,0.35); border-radius: 6px;
+    background: rgba(248,113,113,0.08); color: #f87171; font-size: 12px; cursor: pointer;
+  }
+  .btn-delete:hover { background: rgba(248,113,113,0.18); border-color: #f87171; }
 
   .btn-add-shader {
-    width: 100%; padding: 8px; border: 1px dashed #334155; border-radius: 8px;
-    background: transparent; color: #64748b; cursor: pointer; font-size: 13px;
+    width: 100%; padding: 8px; border: 1px dashed var(--border); border-radius: 8px;
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 13px;
     transition: all 0.15s;
   }
-  .btn-add-shader:hover { border-color: #3b82f6; color: #3b82f6; background: rgba(59,130,246,0.05); }
+  .btn-add-shader:hover { border-color: var(--accent); color: var(--accent); background: rgba(79,195,247,0.05); }
 
   .empty-canvas {
     display: flex; flex-direction: column; align-items: center; justify-content: center;
-    height: 100%; color: #64748b; text-align: center; padding: 40px;
+    height: 100%; color: var(--muted); text-align: center; padding: 40px;
   }
-  .empty-canvas svg { width: 64px; height: 64px; margin-bottom: 14px; color: #334155; }
+  .empty-canvas svg { width: 64px; height: 64px; margin-bottom: 14px; fill: none; stroke: var(--border); stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
   .hint { font-size: 14px; line-height: 1.5; }
 
   .toast {
     position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%);
-    background: #0f172a; color: #f1f5f9; padding: 10px 18px; border-radius: 8px;
+    background: #0c121c; color: var(--text); padding: 10px 18px; border-radius: 8px;
     font-size: 13px; opacity: 0; transition: opacity 0.3s; pointer-events: none; z-index: 100;
-    border: 1px solid #334155;
+    border: 1px solid var(--border);
   }
   .toast.show { opacity: 0.95; }
 
   .marquee {
-    position: absolute; border: 1px dashed #3b82f6; background: rgba(59,130,246,0.08);
+    position: absolute; border: 1px dashed var(--accent); background: rgba(79,195,247,0.08);
     pointer-events: none;
   }
 
   .node {
     position: absolute; width: 10px; height: 10px;
-    background: #3b82f6; border: 2px solid #fff; border-radius: 50%;
+    background: var(--accent); border: 2px solid #fff; border-radius: 50%;
     cursor: pointer; transform: translate(-50%, -50%);
-    box-shadow: 0 0 0 3px rgba(59,130,246,0.4);
+    box-shadow: 0 0 0 3px rgba(79,195,247,0.35);
   }
-  .node.handle { width: 7px; height: 7px; background: #94a3b8; border-color: #cbd5e1; cursor: grab; }
-  .node.handle:active { cursor: grabbing; }
+  .node.handle { width: 7px; height: 7px; background: #64748b; border-color: #94a3b8; cursor: grab; }
+  .node.handle:active { cursor: grabbing; background: var(--accent); }
   .handle-line {
-    position: absolute; height: 1px; background: rgba(59,130,246,0.4);
+    position: absolute; height: 1px; background: rgba(79,195,247,0.45);
     transform-origin: left center; pointer-events: none;
   }
 
   .hotkey { font-size: 10px; color: #475569; margin-left: 6px; }
+  select.prop-input { appearance: none; padding-right: 24px; background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='12' viewBox='0 0 24 24' fill='none' stroke='%238a97ae' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E'); background-repeat: no-repeat; background-position: right 8px center; }
 </style>
 </head>
 <body>
@@ -219,31 +250,47 @@
 <div class="app">
   <!-- Toolbar -->
   <div class="toolbar">
-    <button class="tool-btn active" id="tool-select" title="Selecionar (V)">👉</button>
-    <button class="tool-btn" id="tool-pen" title="Caneta Vetorial (P)">✒️</button>
-    <button class="tool-btn" id="tool-node" title="Editar Nós (A)">⬢</button>
-    <button class="tool-btn" id="tool-rect" title="Retângulo (R)">⬜</button>
-    <button class="tool-btn" id="tool-circle" title="Círculo (O)">⭕</button>
-    <button class="tool-btn" id="tool-text" title="Texto (T)">🔤</button>
-    <div style="width:26px; height:1px; background:#334155; margin:10px 0;"></div>
-    <button class="tool-btn" id="tool-zoom" title="Zoom (Z)">🔍</button>
-    <button class="tool-btn" id="tool-hand" title="Mão (H)">🖐️</button>
+    <button class="tool-btn active" id="tool-select" title="Selecionar (V)">
+      <svg viewBox="0 0 24 24"><path d="M12 2l3 8l-8 1l-2 -6z"/><circle cx="12" cy="11" r="3"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-pen" title="Caneta Vetorial (P)">
+      <svg viewBox="0 0 24 24"><path d="M12 2l3 8l-8 1l-2 -6z"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-node" title="Editar Nós (A)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M8.5 16.5L12 12l3.5 4.5"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-rect" title="Retângulo (R)">
+      <svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-circle" title="Círculo (O)">
+      <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-text" title="Texto (T)">
+      <svg viewBox="0 0 24 24"><path d="M10 20V4h4v16"/><path d="M14 8h4"/><path d="M14 4h4"/></svg>
+    </button>
+    <div style="width:26px; height:1px; background:var(--border); margin:10px 0;"></div>
+    <button class="tool-btn" id="tool-zoom" title="Zoom (Z)">
+      <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+    </button>
+    <button class="tool-btn" id="tool-hand" title="Mão (H)">
+      <svg viewBox="0 0 24 24"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="9" r="2"/><path d="M17 17a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2v2a2 2 0 0 1-2 2z"/></svg>
+    </button>
   </div>
 
   <!-- Topbar -->
   <div class="topbar">
-    <div class="logo">CraftDesign <span style="font-weight:400; font-size:12px; color:#64748b; margin-left:8px;">Vetor + Shaders</span></div>
+    <div class="logo">CraftDesign<span class="logo-sub"> — Vetor + Shaders</span></div>
     <div class="sep"></div>
-    <button class="btn" onclick="app.undo()">↶ Desfazer</button>
-    <button class="btn" onclick="app.redo()">↷ Refazer</button>
+    <button class="btn" onclick="app.undo()"><svg viewBox="0 0 24 24"><path d="M3 12l3-3 3 3"/><path d="M6 12H3M6 12H6"/></svg> Desfazer</button>
+    <button class="btn" onclick="app.redo()"><svg viewBox="0 0 24 24"><path d="M21 12l-3-3-3 3"/><path d="M18 12H21M18 12H18"/></svg> Refazer</button>
     <div class="sep"></div>
-    <button class="btn" onclick="app.boolOp('union')">∪ União</button>
-    <button class="btn" onclick="app.boolOp('subtract')">− Subtrair</button>
-    <button class="btn" onclick="app.boolOp('intersect')">∩ Interseção</button>
-    <button class="btn" onclick="app.boolOp('exclude')">⊕ Diferença</button>
+    <button class="btn" onclick="app.boolOp('union')"><svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2z"/><path d="M12 8v8"/><path d="M8 12h8"/></svg> União</button>
+    <button class="btn" onclick="app.boolOp('subtract')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg> Subtrair</button>
+    <button class="btn" onclick="app.boolOp('intersect')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="16" cy="12" r="4"/></svg> Intersecção</button>
+    <button class="btn" onclick="app.boolOp('exclude')"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><circle cx="12" cy="12" r="4"/></svg> Diferença</button>
     <div class="sep"></div>
-    <button class="btn" onclick="app.exportSVG()">🎨 Exportar SVG</button>
-    <button class="btn primary" onclick="app.exportPNG()">🖼️ Exportar PNG</button>
+    <button class="btn" onclick="app.exportSVG()"><svg viewBox="0 0 24 24"><path d="M4 19.5A1.5 1.5 0 0 1 5.5 18H18"/><path d="M15.5 6L12 3L8.5 6"/><path d="M16 18L12 21L8 18"/></svg> Exportar SVG</button>
+    <button class="btn primary" onclick="app.exportPNG()"><svg viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="12" cy="12" r="3"/></svg> Exportar PNG</button>
     <div class="sep"></div>
     <span class="zoom-badge" id="zoomBadge">100%</span>
     <button class="btn" onclick="app.zoomOut()">−</button>
@@ -257,15 +304,12 @@
       <div class="page" id="page">
         <div id="marquee" class="marquee" style="display:none;"></div>
         <canvas id="shaderCanvas" class="shader-canvas"></canvas>
+        <!-- Frames e paths injetados via JS -->
       </div>
     </div>
     <div class="empty-canvas" id="emptyState">
-      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
-        <path d="M12 2L2 7l10 5 10-5-10-5z"></path>
-        <path d="M2 17l10 5 10-5"></path>
-        <path d="M2 12l10 5 10-5"></path>
-      </svg>
-      <div class="hint">Ferramentas vetoriais + shaders WebGL<br>Caneta (P) para criar paths, Nós (A) para editar</div>
+      <svg viewBox="0 0 24 24"><path d="M12 2L2 7l10 5 10-5-10-5z"/><path d="M2 17l10 5 10-5"/><path d="M2 12l10 5 10-5"/></svg>
+      <div class="hint">Use <b>Caneta (P)</b> para criar vetores ou <b>Retângulo (R)</b> / <b>Círculo (O)</b><br>Clique no canvas para começar a desenhar</div>
     </div>
   </div>
 
@@ -279,7 +323,7 @@
     <div class="sidebar-body" id="sidebarLayers" style="display:flex;">
       <div class="panel">
         <div class="panel-title with-btn">
-          <span>Camadas Vetoriais</span>
+          <span>Camadas</span>
           <button class="btn" style="padding:4px 10px; font-size:12px;" onclick="app.addFrame()">+ Frame</button>
         </div>
         <div id="layersList"></div>
@@ -326,148 +370,6 @@
 
 <div class="toast" id="toast"></div>
 
-<!-- Shader Source (WebGL2) -->
-<script id="shader-vert" type="x-shader/x-vertex">
-#version 300 es
-in vec2 a_position;
-in vec2 a_texCoord;
-out vec2 v_texCoord;
-void main() {
-  gl_Position = vec4(a_position, 0.0, 1.0);
-  v_texCoord = a_texCoord;
-}
-</script>
-
-<script id="shader-frag-blur" type="x-shader/x-fragment">
-#version 300 es
-precision highp float;
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform float u_radius;
-uniform vec2 u_direction;
-in vec2 v_texCoord;
-out vec4 outColor;
-
-float gaussian(float x, float sigma) {
-  return 1.0 / (sqrt(2.0 * 3.14159265) * sigma) * exp(-(x * x) / (2.0 * sigma * sigma));
-}
-
-void main() {
-  vec2 onePixel = vec2(1.0, 1.0) / u_resolution;
-  vec4 color = vec4(0.0);
-  float totalWeight = 0.0;
-  int samples = 15;
-  float sigma = u_radius * 4.0;
-  for (int i = -samples/2; i <= samples/2; i++) {
-    float offset = float(i) * onePixel * u_direction;
-    float weight = gaussian(float(i), sigma);
-    color += texture(u_image, v_texCoord + offset) * weight;
-    totalWeight += weight;
-  }
-  outColor = color / totalWeight;
-}
-</script>
-
-<script id="shader-frag-glow" type="x-shader/x-fragment">
-#version 300 es
-precision highp float;
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform float u_radius;
-uniform float u_intensity;
-uniform vec3 u_color;
-in vec2 v_texCoord;
-out vec4 outColor;
-
-void main() {
-  vec4 base = texture(u_image, v_texCoord);
-  float alpha = base.a;
-  if (alpha < 0.01) {
-    // glow outside
-    vec2 onePixel = vec2(1.0, 1.0) / u_resolution;
-    float glow = 0.0;
-    for (float i = -4.0; i <= 4.0; i += 1.0) {
-      for (float j = -4.0; j <= 4.0; j += 1.0) {
-        vec2 offset = vec2(i, j) * onePixel * u_radius * 0.5;
-        glow += texture(u_image, v_texCoord + offset).a;
-      }
-    }
-    glow = clamp(glow / 81.0, 0.0, 1.0);
-    outColor = vec4(u_color, glow * u_intensity);
-  } else {
-    outColor = base;
-  }
-}
-</script>
-
-<script id="shader-frag-shadow" type="x-shader/x-fragment">
-#version 300 es
-precision highp float;
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform float u_radius;
-uniform float u_offsetX;
-uniform float u_offsetY;
-uniform vec3 u_color;
-uniform float u_opacity;
-in vec2 v_texCoord;
-out vec4 outColor;
-
-void main() {
-  vec4 base = texture(u_image, v_texCoord);
-  vec2 onePixel = vec2(1.0, 1.0) / u_resolution;
-  vec2 offset = vec2(u_offsetX, u_offsetY) * onePixel * u_radius * 0.1;
-  float shadow = 0.0;
-  for (float i = -3.0; i <= 3.0; i += 1.0) {
-    for (float j = -3.0; j <= 3.0; j += 1.0) {
-      vec2 off = offset + vec2(i, j) * onePixel * u_radius * 0.15;
-      shadow += texture(u_image, v_texCoord + off).a;
-    }
-  }
-  shadow = clamp(shadow / 49.0, 0.0, 1.0) * u_opacity;
-  vec4 shadowColor = vec4(u_color, shadow);
-  outColor = mix(base, shadowColor, shadow * 0.6);
-}
-</script>
-
-<script id="shader-frag-tint" type="x-shader/x-fragment">
-#version 300 es
-precision highp float;
-uniform sampler2D u_image;
-uniform vec3 u_color;
-uniform float u_amount;
-in vec2 v_texCoord;
-out vec4 outColor;
-
-void main() {
-  vec4 c = texture(u_image, v_texCoord);
-  vec3 tinted = mix(c.rgb, u_color, u_amount);
-  outColor = vec4(tinted, c.a);
-}
-</script>
-
-<script id="shader-frag-noise" type="x-shader/x-fragment">
-#version 300 es
-precision highp float;
-uniform sampler2D u_image;
-uniform vec2 u_resolution;
-uniform float u_amount;
-uniform float u_time;
-in vec2 v_texCoord;
-out vec4 outColor;
-
-float random(vec2 st) {
-  return fract(sin(dot(st.xy, vec2(12.9898,78.233))) * 43758.5453123);
-}
-
-void main() {
-  vec4 c = texture(u_image, v_texCoord);
-  float noise = random(v_texCoord * 100.0 + u_time * 0.5) * 2.0 - 1.0;
-  c.rgb += noise * u_amount * 0.1;
-  outColor = c;
-}
-</script>
-
 <script>
 class VectorShaderApp {
   constructor() {
@@ -498,7 +400,6 @@ class VectorShaderApp {
     this.viewport = document.getElementById('viewport');
     this.page = document.getElementById('page');
     this.shaderCanvas = document.getElementById('shaderCanvas');
-    this.shaderCtx = this.shaderCanvas.getContext('webgl2');
     this.emptyState = document.getElementById('emptyState');
     this.layersList = document.getElementById('layersList');
     this.shaderStack = document.getElementById('shaderStack');
@@ -507,192 +408,9 @@ class VectorShaderApp {
 
     this.bindUI();
     this.bindCanvas();
-    this.initWebGL();
     this.saveHistory();
     this.render();
     this.loop();
-  }
-
-  /* ---------- WebGL / Shaders ---------- */
-  initWebGL() {
-    if (!this.shaderCtx) {
-      console.warn('WebGL2 não disponível');
-      return;
-    }
-    const gl = this.shaderCtx;
-    // Compile shaders
-    this.programs = {};
-    const sources = {
-      blur: document.getElementById('shader-frag-blur').text,
-      glow: document.getElementById('shader-frag-glow').text,
-      shadow: document.getElementById('shader-frag-shadow').text,
-      tint: document.getElementById('shader-frag-tint').text,
-      noise: document.getElementById('shader-frag-noise').text
-    };
-    const vert = this.compileShader(gl.VERTEX_SHADER, document.getElementById('shader-vert').text);
-    Object.entries(sources).forEach(([name, fragSrc]) => {
-      const frag = this.compileShader(gl.FRAGMENT_SHADER, fragSrc);
-      const prog = gl.createProgram();
-      gl.attachShader(prog, vert);
-      gl.attachShader(prog, frag);
-      gl.linkProgram(prog);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        console.error(name, gl.getProgramInfoLog(prog));
-      }
-      this.programs[name] = prog;
-    });
-    // Fullscreen quad
-    const posBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, posBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      -1,-1, 1,-1, -1,1, -1,1, 1,-1, 1,1
-    ]), gl.STATIC_DRAW);
-    const texBuf = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, texBuf);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
-      0,1, 1,1, 0,0, 0,0, 1,1, 1,0
-    ]), gl.STATIC_DRAW);
-    this.glBuffers = {pos: posBuf, tex: texBuf};
-    this.glTextures = new Map();
-  }
-
-  compileShader(type, source) {
-    const gl = this.shaderCtx;
-    const shader = gl.createShader(type);
-    gl.shaderSource(shader, source);
-    gl.compileShader(shader);
-    if (!gl.getShaderParameter(shader, gl.COMPILE_STATUS)) {
-      console.error(gl.getShaderInfoLog(shader));
-      gl.deleteShader(shader);
-      return null;
-    }
-    return shader;
-  }
-
-  renderShader() {
-    if (!this.shaderCtx) return;
-    const gl = this.shaderCtx;
-    // Resize canvas to match page content
-    const rect = this.page.getBoundingClientRect();
-    this.shaderCanvas.width = rect.width;
-    this.shaderCanvas.height = rect.height;
-    gl.viewport(0, 0, gl.canvas.width, gl.canvas.height);
-
-    // Draw page content to texture (simplified: draw to offscreen then apply shaders)
-    // We'll render the DOM page to a canvas texture, then apply shader stack
-    const tempCanvas = document.createElement('canvas');
-    tempCanvas.width = rect.width;
-    tempCanvas.height = rect.height;
-    const tctx = tempCanvas.getContext('2d');
-    tctx.scale(this.state.zoom, this.state.zoom);
-    // Re-render page into temp canvas
-    this.drawPageToContext(tctx);
-
-    // Create texture from temp canvas
-    const tex = this.createTextureFromCanvas(tempCanvas);
-
-    // Apply shader stack for selected layer
-    const layer = this.state.activeShaderLayer ? this.getLayer(this.state.activeShaderLayer) : null;
-    let inputTex = tex;
-    if (layer && layer.shaders && layer.shaders.length) {
-      layer.shaders.forEach((shader, idx) => {
-        const prog = this.programs[shader.type];
-        if (!prog) return;
-        gl.useProgram(prog);
-        // Setup attributes
-        const posLoc = gl.getAttribLocation(prog, 'a_position');
-        const texLoc = gl.getAttribLocation(prog, 'a_texCoord');
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.glBuffers.pos);
-        gl.enableVertexAttribArray(posLoc);
-        gl.vertexAttribPointer(posLoc, 2, gl.FLOAT, false, 0, 0);
-        gl.bindBuffer(gl.ARRAY_BUFFER, this.glBuffers.tex);
-        gl.enableVertexAttribArray(texLoc);
-        gl.vertexAttribPointer(texLoc, 2, gl.FLOAT, false, 0, 0);
-        // Uniforms
-        const resLoc = gl.getUniformLocation(prog, 'u_resolution');
-        gl.uniform2f(resLoc, gl.canvas.width, gl.canvas.height);
-        const imgLoc = gl.getUniformLocation(prog, 'u_image');
-        gl.activeTexture(gl.TEXTURE0);
-        gl.bindTexture(gl.TEXTURE_2D, inputTex);
-        gl.uniform1i(imgLoc, 0);
-
-        if (shader.type === 'blur') {
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_radius'), shader.params.radius || 5);
-          gl.uniform2f(gl.getUniformLocation(prog, 'u_direction'), 1, 0);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-          // second pass vertical
-          gl.uniform2f(gl.getUniformLocation(prog, 'u_direction'), 0, 1);
-          const tex2 = this.createPingPongTexture(gl.canvas.width, gl.canvas.height);
-          gl.activeTexture(gl.TEXTURE0);
-          gl.bindTexture(gl.TEXTURE_2D, tex2);
-          gl.uniform1i(imgLoc, 0);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-          inputTex = tex2;
-        } else if (shader.type === 'glow') {
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_radius'), shader.params.radius || 8);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_intensity'), shader.params.intensity || 1);
-          const c = shader.params.color || '#3b82f6';
-          const rgb = this.hexToRgb(c);
-          gl.uniform3f(gl.getUniformLocation(prog, 'u_color'), rgb.r/255, rgb.g/255, rgb.b/255);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-        } else if (shader.type === 'shadow') {
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_radius'), shader.params.radius || 10);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_offsetX'), shader.params.offsetX || 4);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_offsetY'), shader.params.offsetY || 4);
-          const c = shader.params.color || '#000000';
-          const rgb = this.hexToRgb(c);
-          gl.uniform3f(gl.getUniformLocation(prog, 'u_color'), rgb.r/255, rgb.g/255, rgb.b/255);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_opacity'), shader.params.opacity || 0.5);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-        } else if (shader.type === 'tint') {
-          const c = shader.params.color || '#3b82f6';
-          const rgb = this.hexToRgb(c);
-          gl.uniform3f(gl.getUniformLocation(prog, 'u_color'), rgb.r/255, rgb.g/255, rgb.b/255);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_amount'), shader.params.amount || 0.5);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-        } else if (shader.type === 'noise') {
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_amount'), shader.params.amount || 0.3);
-          gl.uniform1f(gl.getUniformLocation(prog, 'u_time'), this.state.shaderTime * 0.001);
-          gl.drawArrays(gl.TRIANGLES, 0, 6);
-        }
-      });
-    }
-    gl.deleteTexture(tex);
-  }
-
-  createTextureFromCanvas(canvas) {
-    const gl = this.shaderCtx;
-    const tex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, gl.RGBA, gl.UNSIGNED_BYTE, canvas);
-    return tex;
-  }
-
-  createPingPongTexture(w, h) {
-    const gl = this.shaderCtx;
-    const tex = gl.createTexture();
-    gl.bindTexture(gl.TEXTURE_2D, tex);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
-    gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
-    gl.texImage2D(gl.TEXTURE_2D, 0, gl.RGBA, w, h, 0, gl.RGBA, gl.UNSIGNED_BYTE, null);
-    return tex;
-  }
-
-  hexToRgb(hex) {
-    const m = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return m ? {r: parseInt(m[1],16), g: parseInt(m[2],16), b: parseInt(m[3],16)} : {r:59,g:130,b:246};
-  }
-
-  loop() {
-    this.state.shaderTime += 16;
-    if (this.state.activeShaderLayer) this.renderShader();
-    requestAnimationFrame(() => this.loop());
   }
 
   /* ---------- UI ---------- */
@@ -713,6 +431,7 @@ class VectorShaderApp {
 
     window.addEventListener('keydown', (e) => {
       if (e.target.tagName === 'INPUT' && e.target.type !== 'number' && e.target.type !== 'range') return;
+      if (e.target.tagName === 'SELECT') return;
       const key = e.key.toLowerCase();
       if (key === 'v') this.setTool('select');
       if (key === 'p') this.setTool('pen');
@@ -786,7 +505,7 @@ class VectorShaderApp {
     this.render();
   }
 
-  /* ---------- Layers / Vector ---------- */
+  /* ---------- Layers ---------- */
   getLayer(id) {
     return this.state.layers.find(l => l.id === id);
   }
@@ -801,7 +520,7 @@ class VectorShaderApp {
     } else {
       this.state.selectedIds = [id];
     }
-    this.state.activeShaderLayer = id;
+    this.state.activeShaderLayer = this.state.selectedIds[0] || null;
     this.render();
   }
 
@@ -821,12 +540,12 @@ class VectorShaderApp {
   }
 
   newLayer(type, x, y, w, h, extra = {}) {
-    const base = {
+    return {
       id: this.state.nextId++,
       type,
       x, y, w, h,
       fill: extra.fill ?? '#ffffff',
-      stroke: extra.stroke ?? '#3b82f6',
+      stroke: extra.stroke ?? (type === 'text' ? '#4fc3f7' : '#4fc3f7'),
       strokeWidth: extra.strokeWidth ?? 2,
       radius: extra.radius ?? (type === 'circle' ? 999 : 8),
       opacity: extra.opacity ?? 1,
@@ -834,17 +553,14 @@ class VectorShaderApp {
       text: extra.text ?? '',
       visible: true,
       locked: false,
-      // Vector path data
       path: extra.path || null,
       nodes: extra.nodes || [],
-      // Shaders
       shaders: extra.shaders || []
     };
-    return base;
   }
 
   addFrame() {
-    const f = this.newLayer('frame', 100, 100, 400, 600, { fill: '#0f172a', stroke: '#334155', radius: 16 });
+    const f = this.newLayer('frame', 100, 100, 400, 600, { fill: '#0b0f19', stroke: '#223044', radius: 16 });
     this.state.layers.push(f);
     this.saveHistory();
     this.deselectAll();
@@ -853,7 +569,7 @@ class VectorShaderApp {
     this.showToast('Frame criado');
   }
 
-  addPathNode(x, y, type = 'curve', handleIn = null, handleOut = null) {
+  addPathNode(x, y, type = 'line', handleIn = null, handleOut = null) {
     return { x, y, type, handleIn, handleOut };
   }
 
@@ -863,7 +579,7 @@ class VectorShaderApp {
       type: 'path',
       x, y, w: 0, h: 0,
       fill: 'transparent',
-      stroke: '#3b82f6',
+      stroke: '#4fc3f7',
       strokeWidth: 3,
       radius: 0,
       opacity: 1,
@@ -885,8 +601,7 @@ class VectorShaderApp {
     if (!this.state.currentPath) return;
     const path = this.state.currentPath;
     const last = path.nodes[path.nodes.length - 1];
-    // Convert last to curve with handle out towards new point
-    if (path.nodes.length > 1) {
+    if (path.nodes.length > 1 && last.type === 'line') {
       last.type = 'curve';
       last.handleOut = { x: (last.x + x) / 2, y: (last.y + y) / 2 };
     }
@@ -899,11 +614,12 @@ class VectorShaderApp {
   finishPath() {
     if (this.state.currentPath) {
       this.state.currentPath = null;
-      this.showToast('Path finalizado');
+      this.showToast('Path finalizado (clique outro lugar para novo)');
     }
   }
 
   updatePathBounds(path) {
+    if (!path.nodes || path.nodes.length === 0) return;
     let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
     path.nodes.forEach(n => {
       minX = Math.min(minX, n.x);
@@ -913,7 +629,7 @@ class VectorShaderApp {
       if (n.handleOut) { minX = Math.min(minX, n.handleOut.x); minY = Math.min(minY, n.handleOut.y); maxX = Math.max(maxX, n.handleOut.x); maxY = Math.max(maxY, n.handleOut.y); }
       if (n.handleIn) { minX = Math.min(minX, n.handleIn.x); minY = Math.min(minY, n.handleIn.y); maxX = Math.max(maxX, n.handleIn.x); maxY = Math.max(maxY, n.handleIn.y); }
     });
-    path.x = minX; path.y = minY; path.w = maxX - minX; path.h = maxY - minY;
+    path.x = minX; path.y = minY; path.w = Math.max(maxX - minX, 1); path.h = Math.max(maxY - minY, 1);
   }
 
   pathToSVG(path) {
@@ -930,12 +646,12 @@ class VectorShaderApp {
         d += ` C ${hOut.x} ${hOut.y}, ${hIn.x} ${hIn.y}, ${n.x} ${n.y}`;
       }
     }
-    if (path.nodes[0].type !== 'line') d += ' Z';
+    if (path.nodes.length > 1) d += ' Z';
     return d;
   }
 
   addRect(x, y) {
-    const r = this.newLayer('rect', x, y, 140, 140, { fill: '#ffffff', stroke: '#3b82f6', radius: 8 });
+    const r = this.newLayer('rect', x, y, 160, 160, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 8 });
     this.state.layers.push(r);
     this.saveHistory();
     this.deselectAll();
@@ -944,7 +660,7 @@ class VectorShaderApp {
   }
 
   addCircle(x, y) {
-    const c = this.newLayer('circle', x, y, 120, 120, { fill: '#ffffff', stroke: '#3b82f6', radius: 999 });
+    const c = this.newLayer('circle', x, y, 140, 140, { fill: '#0b0f19', stroke: '#4fc3f7', radius: 999 });
     this.state.layers.push(c);
     this.saveHistory();
     this.deselectAll();
@@ -953,7 +669,7 @@ class VectorShaderApp {
   }
 
   addText(x, y) {
-    const t = this.newLayer('text', x, y, 160, 48, { fill: 'transparent', stroke: '#3b82f6', text: 'Texto', radius: 0 });
+    const t = this.newLayer('text', x, y, 160, 48, { fill: 'transparent', stroke: '#4fc3f7', text: 'Texto', radius: 0 });
     this.state.layers.push(t);
     this.saveHistory();
     this.deselectAll();
@@ -976,9 +692,9 @@ class VectorShaderApp {
     if (!layer) { this.showToast('Selecione uma camada primeiro'); return; }
     const presets = {
       blur: { type: 'blur', params: { radius: 5 } },
-      glow: { type: 'glow', params: { radius: 8, intensity: 1, color: '#3b82f6' } },
+      glow: { type: 'glow', params: { radius: 8, intensity: 1, color: '#4fc3f7' } },
       shadow: { type: 'shadow', params: { radius: 10, offsetX: 4, offsetY: 4, color: '#000000', opacity: 0.5 } },
-      tint: { type: 'tint', params: { color: '#3b82f6', amount: 0.5 } },
+      tint: { type: 'tint', params: { color: '#4fc3f7', amount: 0.5 } },
       noise: { type: 'noise', params: { amount: 0.3 } }
     };
     layer.shaders = layer.shaders || [];
@@ -1022,7 +738,6 @@ class VectorShaderApp {
       this.shaderStack.appendChild(div);
     });
 
-    // Params
     this.shaderParams.innerHTML = '';
     if (this.state.activeShaderIndex !== null && layer && layer.shaders[this.state.activeShaderIndex]) {
       const shader = layer.shaders[this.state.activeShaderIndex];
@@ -1032,7 +747,8 @@ class VectorShaderApp {
         if (key === 'color') {
           div.innerHTML = `<div class="ctrl-label">${key}</div><input type="color" class="ctrl-color" value="${val}" onchange="app.updateShaderParam(${layer.id}, ${idx}, '${key}', this.value)">`;
         } else {
-          div.innerHTML = `<div class="ctrl-label">${key}</div><input type="range" min="0" max="${key === 'amount' ? 1 : key === 'opacity' ? 1 : 50}" step="0.1" class="ctrl-slider" value="${val}" oninput="app.updateShaderParam(${layer.id}, ${idx}, '${key}', parseFloat(this.value))"><div class="ctrl-value">${val}</div>`;
+          const max = key === 'amount' || key === 'opacity' ? 1 : 50;
+          div.innerHTML = `<div class="ctrl-label">${key}</div><div style="display:flex; gap:8px; align-items:center;"><input type="range" min="0" max="${max}" step="0.1" class="ctrl-slider" value="${val}" oninput="app.updateShaderParam(${layer.id}, ${idx}, '${key}', parseFloat(this.value)); this.nextElementSibling.textContent=this.value"><div class="ctrl-value">${val}</div></div>`;
         }
         this.shaderParams.appendChild(div);
       });
@@ -1046,53 +762,6 @@ class VectorShaderApp {
     this.renderProps();
     this.renderShaderUI();
     this.updateEmptyState();
-  }
-
-  drawPageToContext(ctx) {
-    // Clear
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    this.state.layers.forEach(layer => {
-      if (!layer.visible || layer.locked) return;
-      ctx.globalAlpha = layer.opacity;
-      ctx.save();
-      ctx.translate(layer.x, layer.y);
-      if (layer.type === 'path' && layer.nodes) {
-        ctx.beginPath();
-        if (layer.nodes.length > 0) {
-          ctx.moveTo(layer.nodes[0].x, layer.nodes[0].y);
-          for (let i = 1; i < layer.nodes.length; i++) {
-            const n = layer.nodes[i];
-            const prev = layer.nodes[i - 1];
-            if (n.type === 'line') ctx.lineTo(n.x, n.y);
-            else if (n.type === 'curve') {
-              const hOut = prev.handleOut || {x: prev.x, y: prev.y};
-              const hIn = n.handleIn || {x: n.x, y: n.y};
-              ctx.bezierCurveTo(hOut.x, hOut.y, hIn.x, hIn.y, n.x, n.y);
-            }
-          }
-          if (layer.nodes[0].type !== 'line') ctx.closePath();
-        }
-        if (layer.fill && layer.fill !== 'transparent') { ctx.fillStyle = layer.fill; ctx.fill(); }
-        if (layer.stroke) { ctx.strokeStyle = layer.stroke; ctx.lineWidth = layer.strokeWidth; ctx.stroke(); }
-      } else if (layer.type === 'rect' || layer.type === 'frame' || layer.type === 'circle') {
-        ctx.fillStyle = layer.fill;
-        ctx.strokeStyle = layer.stroke;
-        ctx.lineWidth = layer.strokeWidth;
-        ctx.beginPath();
-        ctx.roundRect(0, 0, layer.w, layer.h, layer.radius);
-        ctx.fill();
-        if (layer.stroke) ctx.stroke();
-        if (layer.type === 'text' && layer.text) {
-          ctx.fillStyle = layer.stroke || '#3b82f6';
-          ctx.font = '16px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillText(layer.text, layer.w / 2, layer.h / 2);
-        }
-      }
-      ctx.restore();
-    });
   }
 
   renderPage() {
@@ -1116,18 +785,46 @@ class VectorShaderApp {
       el.style.borderRadius = layer.radius + 'px';
       el.style.opacity = layer.opacity;
       el.style.display = layer.locked ? 'none' : 'block';
+      el.style.mixBlendMode = layer.blendMode;
       el.dataset.id = layer.id;
       el.onmousedown = (e) => this.onLayerMouseDown(e, layer);
       el.ondblclick = (e) => { e.stopPropagation(); this.editText(layer); };
       this.page.appendChild(el);
 
-      // Vector path overlay
-      if (layer.type === 'path' && layer.nodes && this.isSelected(layer.id)) {
-        this.drawPathOverlay(el, layer);
+      // Path SVG overlay para camadas vetoriais
+      if (layer.type === 'path' && layer.nodes && layer.nodes.length > 0) {
+        const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+        svg.className = 'path-svg';
+        svg.style.width = '100%';
+        svg.style.height = '100%';
+        const pathEl = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+        pathEl.setAttribute('d', this.pathToSVG(layer));
+        pathEl.setAttribute('fill', layer.fill && layer.fill !== 'transparent' ? layer.fill : 'none');
+        pathEl.setAttribute('stroke', layer.stroke);
+        pathEl.setAttribute('stroke-width', layer.strokeWidth);
+        pathEl.setAttribute('stroke-linecap', 'round');
+        pathEl.setAttribute('stroke-linejoin', 'round');
+        svg.appendChild(pathEl);
+        el.appendChild(svg);
       }
 
-      // Nodes overlay
-      if (this.state.tool === 'node' && this.isSelected(layer.id) && layer.nodes) {
+      // Texto dentro de rect/frame
+      if ((layer.type === 'rect' || layer.type === 'frame' || layer.type === 'text') && layer.text) {
+        const txt = document.createElement('div');
+        txt.style.position = 'absolute';
+        txt.style.left = '50%';
+        txt.style.top = '50%';
+        txt.style.transform = 'translate(-50%, -50%)';
+        txt.style.fontSize = '14px';
+        txt.style.color = layer.stroke;
+        txt.style.userSelect = 'none';
+        txt.style.pointerEvents = 'none';
+        txt.textContent = layer.text;
+        el.appendChild(txt);
+      }
+
+      // Nodes overlay (modo nó ou seleção de path)
+      if ((this.state.tool === 'node' || layer.type === 'path') && this.isSelected(layer.id) && layer.nodes) {
         layer.nodes.forEach((n, i) => {
           const nodeEl = document.createElement('div');
           nodeEl.className = 'node';
@@ -1135,9 +832,9 @@ class VectorShaderApp {
           nodeEl.style.top = n.y + 'px';
           nodeEl.dataset.layer = layer.id;
           nodeEl.dataset.index = i;
-          nodeEl.onmousedown = (e) => this.onNodeMouseDown(e, layer, i);
+          nodeEl.onmousedown = (ev) => this.onNodeMouseDown(ev, layer, i);
           el.appendChild(nodeEl);
-          // Handles
+
           if (n.handleOut) {
             this.drawHandle(el, layer, i, n.handleOut, 'out');
           }
@@ -1149,31 +846,16 @@ class VectorShaderApp {
     });
   }
 
-  drawPathOverlay(containerEl, layer) {
-    const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
-    svg.style.position = 'absolute';
-    svg.style.top = '0'; svg.style.left = '0';
-    svg.style.width = '100%'; svg.style.height = '100%';
-    svg.style.pointerEvents = 'none';
-    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
-    path.setAttribute('d', this.pathToSVG(layer));
-    path.setAttribute('fill', 'none');
-    path.setAttribute('stroke', '#3b82f6');
-    path.setAttribute('stroke-width', '2');
-    path.setAttribute('stroke-dasharray', '6,4');
-    svg.appendChild(path);
-    containerEl.appendChild(svg);
-  }
-
   drawHandle(containerEl, layer, nodeIndex, handlePos, type) {
     const line = document.createElement('div');
     line.className = 'handle-line';
-    const dx = handlePos.x - (layer.nodes[nodeIndex].x);
-    const dy = handlePos.y - (layer.nodes[nodeIndex].y);
-    const dist = Math.sqrt(dx*dx + dy*dy);
+    const node = layer.nodes[nodeIndex];
+    const dx = handlePos.x - node.x;
+    const dy = handlePos.y - node.y;
+    const dist = Math.hypot(dx, dy);
     const angle = Math.atan2(dy, dx) * 180 / Math.PI;
-    line.style.left = layer.nodes[nodeIndex].x + 'px';
-    line.style.top = layer.nodes[nodeIndex].y + 'px';
+    line.style.left = node.x + 'px';
+    line.style.top = node.y + 'px';
     line.style.width = dist + 'px';
     line.style.transform = `rotate(${angle}deg)`;
     containerEl.appendChild(line);
@@ -1185,7 +867,7 @@ class VectorShaderApp {
     h.dataset.layer = layer.id;
     h.dataset.node = nodeIndex;
     h.dataset.type = type;
-    h.onmousedown = (e) => this.onHandleMouseDown(e, layer, nodeIndex, type);
+    h.onmousedown = (ev) => this.onHandleMouseDown(ev, layer, nodeIndex, type);
     containerEl.appendChild(h);
   }
 
@@ -1195,10 +877,11 @@ class VectorShaderApp {
       const div = document.createElement('div');
       div.className = 'layer-item' + (this.isSelected(layer.id) ? ' selected' : '');
       div.onclick = (e) => { e.stopPropagation(); this.selectLayer(layer.id, e.ctrlKey || e.metaKey); };
+      const icon = layer.type === 'path' ? '✐' : layer.type === 'text' ? 'T' : '□';
       div.innerHTML = `
-        <div class="layer-visibility" title="Visibilidade" onclick="event.stopPropagation(); app.toggleVisibility(${layer.id})">${layer.visible ? '👁️' : '🙈'}</div>
+        <div class="layer-visibility" title="Visibilidade" onclick="event.stopPropagation(); app.toggleVisibility(${layer.id})">${layer.visible ? '👁' : '🙈'}</div>
         <div class="layer-lock" title="Travar" onclick="event.stopPropagation(); app.toggleLock(${layer.id})">${layer.locked ? '🔒' : '🔓'}</div>
-        <div class="layer-thumb">${layer.type === 'path' ? '✒' : layer.type === 'text' ? 'T' : '□'}</div>
+        <div class="layer-thumb">${icon}</div>
         <div class="layer-name">${layer.text || (layer.type.charAt(0).toUpperCase() + layer.type.slice(1))} #${layer.id}</div>
       `;
       this.layersList.appendChild(div);
@@ -1258,19 +941,27 @@ class VectorShaderApp {
 
   /* ---------- Canvas events ---------- */
   bindCanvas() {
+    // Clique no espaço vazio do canvas
     this.page.onmousedown = (e) => {
-      if (e.target === this.page || e.target === this.viewport) {
-        if (this.state.tool === 'select') {
-          this.deselectAll();
-          if (e.shiftKey) this.startMarquee(e);
-        } else if (this.state.tool === 'pen') {
-          this.startPathFromClick(e);
-        } else if (['rect','circle','text'].includes(this.state.tool)) {
-          const pos = this.getCanvasPos(e);
-          if (this.state.tool === 'rect') this.addRect(pos.x, pos.y);
-          if (this.state.tool === 'circle') this.addCircle(pos.x, pos.y);
-          if (this.state.tool === 'text') this.addText(pos.x, pos.y);
-        }
+      // Só trata clique direto no page/viewport (não em elementos filhos)
+      if (e.target !== this.page && e.target !== this.viewport && e.target !== document.getElementById('marquee')) return;
+
+      if (this.state.tool === 'select') {
+        this.deselectAll();
+        if (e.shiftKey) this.startMarquee(e);
+      } else if (this.state.tool === 'pen') {
+        const pos = this.getCanvasPos(e);
+        this.startPath(pos.x, pos.y);
+        this.state.isDrawing = true;
+      } else if (this.state.tool === 'rect') {
+        const pos = this.getCanvasPos(e);
+        this.addRect(pos.x, pos.y);
+      } else if (this.state.tool === 'circle') {
+        const pos = this.getCanvasPos(e);
+        this.addCircle(pos.x, pos.y);
+      } else if (this.state.tool === 'text') {
+        const pos = this.getCanvasPos(e);
+        this.addText(pos.x, pos.y);
       }
     };
 
@@ -1319,32 +1010,30 @@ class VectorShaderApp {
         const x = (e.clientX - rect.left) / this.state.zoom;
         const y = (e.clientY - rect.top) / this.state.zoom;
         const {layer, index} = this.state.currentNode;
-        layer.nodes[index].x = x;
-        layer.nodes[index].y = y;
-        // move attached handles
         const n = layer.nodes[index];
-        if (n.handleOut) n.handleOut = {x: n.handleOut.x + (x - this.state.dragStart.x), y: n.handleOut.y + (y - this.state.dragStart.y)};
-        if (n.handleIn) n.handleIn = {x: n.handleIn.x + (x - this.state.dragStart.x), y: n.handleIn.y + (y - this.state.dragStart.y)};
+        const dx = x - n.x;
+        const dy = y - n.y;
+        n.x = x;
+        n.y = y;
+        if (n.handleOut) n.handleOut = {x: n.handleOut.x + dx, y: n.handleOut.y + dy};
+        if (n.handleIn) n.handleIn = {x: n.handleIn.x + dx, y: n.handleIn.y + dy};
         this.updatePathBounds(layer);
-        this.state.dragStart = {x, y};
         this.render();
         return;
       }
-      if (this.state.isDrawing && this.state.currentPath) {
-        // preview line to cursor
-        this.render();
-      }
     };
 
-    this.page.onmouseup = () => {
-      this.state.isDragging = false;
-      this.state.currentNode = null;
-      this.state.handleDrag = null;
+    this.page.onmouseup = (e) => {
       if (this.state.isMarquee) {
         this.finishMarquee();
         this.state.isMarquee = false;
         document.getElementById('marquee').style.display = 'none';
+        return;
       }
+      this.state.isDragging = false;
+      this.state.currentNode = null;
+      this.state.handleDrag = null;
+      // No modo caneta, clique adiciona nó; se quiser finalizar, pressione Esc ou mude de ferramenta
     };
 
     this.viewport.onwheel = (e) => {
@@ -1383,12 +1072,6 @@ class VectorShaderApp {
     this.render();
   }
 
-  startPathFromClick(e) {
-    const pos = this.getCanvasPos(e);
-    this.startPath(pos.x, pos.y);
-    this.state.isDrawing = true;
-  }
-
   onLayerMouseDown(e, layer) {
     e.stopPropagation();
     if (this.state.tool === 'select') {
@@ -1407,7 +1090,7 @@ class VectorShaderApp {
   onNodeMouseDown(e, layer, index) {
     e.stopPropagation();
     this.state.currentNode = {layer, index};
-    this.state.dragStart = this.getCanvasPos(e);
+    this.state.dragStart = { x: layer.nodes[index].x, y: layer.nodes[index].y };
   }
 
   onHandleMouseDown(e, layer, nodeIndex, type) {
@@ -1420,12 +1103,13 @@ class VectorShaderApp {
     return { x: (e.clientX - rect.left) / this.state.zoom, y: (e.clientY - rect.top) / this.state.zoom };
   }
 
-  /* ---------- Boolean ops (visual) ---------- */
+  /* ---------- Boolean ops ---------- */
   boolOp(op) {
     const sel = this.getSelected();
     if (sel.length < 2) { this.showToast('Selecione 2 ou mais camadas'); return; }
-    // Simple visual boolean: just group them with blend mode
-    sel.forEach(l => l.blendMode = op === 'subtract' ? 'destination-out' : op === 'intersect' ? 'destination-in' : op === 'exclude' ? 'destination-over' : 'source-over');
+    sel.forEach(l => {
+      l.blendMode = op === 'subtract' ? 'destination-out' : op === 'intersect' ? 'destination-in' : op === 'exclude' ? 'destination-over' : 'source-over';
+    });
     this.saveHistory();
     this.render();
     this.showToast(`Operação booleana: ${op}`);
@@ -1436,9 +1120,9 @@ class VectorShaderApp {
     let svg = `<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000">`;
     this.state.layers.forEach(layer => {
       if (!layer.visible) return;
-      svg += `<g opacity="${layer.opacity}" transform="translate(${layer.x},${layer.y})">`;
+      svg += `<g opacity="${layer.opacity}" transform="translate(${layer.x},${layer.y})" style="mix-blend-mode:${layer.blendMode}">`;
       if (layer.type === 'path' && layer.nodes) {
-        svg += `<path d="${this.pathToSVG(layer)}" fill="${layer.fill}" stroke="${layer.stroke}" stroke-width="${layer.strokeWidth}"/>`;
+        svg += `<path d="${this.pathToSVG(layer)}" fill="${layer.fill}" stroke="${layer.stroke}" stroke-width="${layer.strokeWidth}" stroke-linecap="round" stroke-linejoin="round"/>`;
       } else {
         svg += `<rect x="0" y="0" width="${layer.w}" height="${layer.h}" rx="${layer.radius}" fill="${layer.fill}" stroke="${layer.stroke}" stroke-width="${layer.strokeWidth}"/>`;
         if (layer.type === 'text' && layer.text) {
@@ -1485,6 +1169,7 @@ class VectorShaderApp {
               ctx.bezierCurveTo(hOut.x, hOut.y, hIn.x, hIn.y, n.x, n.y);
             }
           }
+          if (layer.nodes.length > 1) ctx.closePath();
         }
         if (layer.fill && layer.fill !== 'transparent') { ctx.fillStyle = layer.fill; ctx.fill(); }
         if (layer.stroke) { ctx.strokeStyle = layer.stroke; ctx.lineWidth = layer.strokeWidth; ctx.stroke(); }
@@ -1497,7 +1182,7 @@ class VectorShaderApp {
         ctx.fill();
         if (layer.stroke) ctx.stroke();
         if (layer.type === 'text' && layer.text) {
-          ctx.fillStyle = layer.stroke || '#3b82f6';
+          ctx.fillStyle = layer.stroke || '#4fc3f7';
           ctx.font = '16px sans-serif';
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -1521,6 +1206,11 @@ class VectorShaderApp {
     t.textContent = msg;
     t.classList.add('show');
     setTimeout(() => t.classList.remove('show'), 2000);
+  }
+
+  loop() {
+    this.state.shaderTime += 16;
+    requestAnimationFrame(() => this.loop());
   }
 }
 
