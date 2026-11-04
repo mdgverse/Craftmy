@@ -1004,20 +1004,18 @@ class VectorShaderApp {
     const viewport = this.viewport;
     const canvasArea = this.canvasArea;
 
-    // === PAGE MOUSEDOWN: início de criação ou seleção ===
-    page.onmousedown = (e) => {
-      // Ignorar clique dentro de frames (eles tratam via onmousedown próprio)
-      if (e.target !== page && e.target !== viewport && e.target.tagName !== 'DIV') return;
-      if (e.target.classList && e.target.classList.contains('frame')) return;
-      if (e.target.id === 'marquee') return;
-      if (e.target.id === 'shaderCanvas') return;
+    // === VIEWPORT MOUSEDOWN: início de criação ou seleção (canvas infinito) ===
+    viewport.onmousedown = (e) => {
+      // Ignorar se clicou dentro de um frame (eles tratam via onmousedown próprio)
+      if (e.target !== viewport && e.target !== page && !e.target.classList.contains('frame')) return;
 
       e.stopPropagation();
       e.preventDefault();
 
-      const rect = page.getBoundingClientRect();
-      const x = (e.clientX - rect.left) / this.state.zoom;
-      const y = (e.clientY - rect.top) / this.state.zoom;
+      const rect = viewport.getBoundingClientRect();
+      // Ajustar pelo padding do viewport (60px) e scroll
+      const x = (e.clientX - rect.left - 60) / this.state.zoom;
+      const y = (e.clientY - rect.top - 60) / this.state.zoom;
 
       if (this.state.tool === 'select') {
         this.deselectAll();
@@ -1031,8 +1029,8 @@ class VectorShaderApp {
       }
     };
 
-    // === PAGE MOUSEMOVE: arrasto de criação, seleção, pan ===
-    page.onmousemove = (e) => {
+    // === WINDOW MOUSEMOVE: arrasto de criação, seleção, pan (funciona fora do page) ===
+    window.onmousemove = (e) => {
       if (this.state.isMarquee) {
         const rect = page.getBoundingClientRect();
         const x = (e.clientX - rect.left) / this.state.zoom;
