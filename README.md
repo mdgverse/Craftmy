@@ -22,3 +22,7 @@ Abra o endereço mostrado pelo Vite. `npm run build` verifica os tipos e gera a 
 ## Limitações e próximos passos
 
 Este é um ponto de partida, não a implementação completa da especificação: roupas adaptativas, objetos, IK interativa, dedos articulados, iluminação editável e efeitos de pós-processamento ainda não estão integrados. Os modelos são representações procedurais simplificadas; a ausência de interseções anatômicas ou de roupas não é garantida. Alguns catálogos e módulos de geometria/IK estão preparados para desenvolvimento posterior. A estimativa de imagem precisa de validação adicional em navegadores, diferentes posições, enquadramentos e imagens oclusas antes de ser considerada uma solução de produção.
+
+### Modelo BodyKun
+
+O modelo BodyKun enviado pelo usuário é a base dos novos personagens. Projetos antigos mantêm o modelo procedural e podem mudar de modelo em **Corpo → Modelo base**. O arquivo exportado só contém BodyKun, não BodyChan. O modelo importado tem suporte experimental a altura, cor e rotação direta de ossos; os controles Rigify originais não são executados no navegador. Biotipo detalhado, cabelo e estilos ainda estão disponíveis somente no manequim procedural. `node scripts/check-bodykun.mjs` verifica o GLB, ossos principais e deformação de vértices, sem substituir testes visuais no navegador. A proveniência e a licença estão em `assets/source/README.md`.

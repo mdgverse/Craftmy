@@ -1402,6 +1402,7 @@ export function createCharacter(
   return {
     id,
     name,
+    modelId: 'bodykun',
     visible: true,
     locked: false,
     position: [...position],
